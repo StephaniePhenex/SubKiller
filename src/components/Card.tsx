@@ -4,7 +4,7 @@ type CardProps = HTMLAttributes<HTMLElement>;
 
 export function Card({ className = "", children, ...props }: CardProps) {
   return (
-    <section className={`neo-border neo-rounded bg-receipt shadow-neo ${className}`} {...props}>
+    <section className={`rounded-card border-[length:var(--spacing-border-thick)] border-ink bg-white ${className}`} {...props}>
       {children}
     </section>
   );

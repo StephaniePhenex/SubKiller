@@ -20,14 +20,14 @@ export default function Home() {
         <p className="text-6xl font-bold leading-none tracking-tighter">$0.00</p>
         <p className="text-2xl font-bold">/Year</p>
 
-        <div className="mt-5 flex items-center justify-between gap-4 border-t-4 border-black pt-3">
+        <div className="mt-5 flex items-center justify-between gap-4 border-t-[length:var(--spacing-border-thick)] border-ink pt-3">
           <span>Still bleeding</span>
           <span className="font-bold text-blood">−$0.00/yr</span>
         </div>
 
         <div className="mt-4 flex items-center gap-3">
-          <span className="neo-border neo-pill bg-mint px-3 py-1 font-bold">82</span>
-          <span className="neo-border neo-pill bg-chartreuse px-3 py-1 font-bold">Keep it</span>
+          <span className="rounded-pill border-[length:var(--spacing-border-thick)] border-ink bg-mint px-3 py-1 font-bold">82</span>
+          <span className="rounded-pill border-[length:var(--spacing-border-thick)] border-ink bg-chartreuse px-3 py-1 font-bold">Keep it</span>
         </div>
 
         <div className="mt-8">

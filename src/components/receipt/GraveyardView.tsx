@@ -142,7 +142,7 @@ export function GraveyardView() {
   return (
     <div className="flex flex-col gap-6">
       <section className="border-4 border-black rounded-3xl p-6 neo-shadow" style={{ background: CHART }} aria-live="polite">
-        <p className="text-lg font-bold">TOTAL MONEY SAVED:</p>
+        <p className="text-lg font-bold">TOTAL MONEY BLED:</p>
         <p className="text-6xl font-bold leading-none tracking-tighter break-words">{money(savedYearly)}</p>
         <p className="text-2xl font-bold">/Year</p>
 

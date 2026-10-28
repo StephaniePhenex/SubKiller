@@ -40,7 +40,7 @@
 ## 5. Core Business Logic & Data Boundaries
 
 - **The What-If Savings Simulator:**
-  - Checking or unchecking items in the Graveyard MUST instantly recalculate the 'TOTAL MONEY SAVED' figure.
+  - Checking or unchecking items in the Graveyard MUST instantly recalculate the 'TOTAL MONEY BLED' figure.
   - This calculation relies on **pure client-side React state** for zero-latency UX.
   - DO NOT make round-trip database/API calls just to toggle a simulator checkbox.
 - **Voice Input State Machine:**
@@ -80,10 +80,13 @@
   - DO NOT introduce heavy UI component libraries (like Material-UI or Ant Design). We build our own Neo-Brutalist components.
 
 ### Build & Environment Commands
+
 When executing tasks or providing terminal instructions, strictly adhere to these project commands:
+
 - **Install Dependencies:** `npm install`
 - **Local Development:** `npm run dev` (Runs Next.js App Router on localhost)
 - **Design Tokens Generation (CRITICAL):** `npx @google/design.md export --format css-tailwind DESIGN.md > src/app/generated-theme.css` (Must be run if DESIGN.md is updated)
 - **Design System Linting:** `npx @google/design.md lint DESIGN.md`
 - **Testing:** `npm test` (Runs Jest unit tests)
 - **Build for Production:** `npm run build`
+

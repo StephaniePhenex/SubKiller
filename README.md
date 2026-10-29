@@ -20,6 +20,22 @@ SubKiller is an AI-driven, Neo-Brutalist web application designed to track, eval
 
 3. Run `npm run dev` to start the local development server.
 
+## Environment Variables
+
+| Variable | Used for | Exposure | Where to set it |
+| --- | --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Public (sent to the browser) | `.env.local`; Vercel → Settings → Environment Variables (Preview + Production) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key, protected by RLS | Public (sent to the browser) | `.env.local`; Vercel → Settings → Environment Variables (Preview + Production) |
+
+- `.env.example` lists every variable with placeholder values. Never commit real values: `.env*` files other than `.env.example` are git-ignored.
+- Server-only secrets (for example a Supabase service-role key or an AI provider key) must not use the `NEXT_PUBLIC_` prefix. Store them only in Vercel environment variables, and in GitHub Actions secrets only if a CI step needs them.
+- CI does not need any secrets today: the unit tests do not connect to Supabase.
+
+## CI/CD
+
+- `.github/workflows/ci.yml` runs on every pull request to `main` and on every push to `main`: `npm ci`, `npm audit --audit-level=high`, `npm run lint`, the `DESIGN.md` lint, and `npm test`. Any failing step fails the `build-and-test` check.
+- Vercel's GitHub integration builds a Deploy Preview for each pull request and deploys `main` to production on merge.
+
 ## Testing
 
 - `npm test` runs the Jest + React Testing Library unit tests.

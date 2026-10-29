@@ -2,7 +2,7 @@
 
 ## 1. Project Context & Migration Architecture
 
-- **PRD Reference (CRITICAL):** Before starting any new feature or issue, read `prd_subkiller.md` at the repository root. It is the source for User Stories, Acceptance Criteria, and the core application logic.
+- **PRD Reference (CRITICAL):** Before starting any new feature or issue, read `docs/PRD.md`. It is the source for User Stories, Acceptance Criteria, and the core application logic.
 - **Folder Structure (Strict Enforcement):**
   - `/src/components`: Reusable UI widgets (e.g., neo-brutalist buttons, inputs, read-only badges).
   - `/src/app`: Next.js App Router pages and API routes.
@@ -19,23 +19,9 @@
 - **What-If Simulator (US4):** Instant toggle switches on graveyard items to simulate financial impact.
 - **Total Savings (US5):** Real-time aggregation of money saved, displayed prominently at the top of the app.
 
-## 3. UI/UX Ironclads (Rounded Neo-Brutalism)
+## 3. UI/UX Ironclads
 
-This project strictly adheres to a "Rounded Neo-Brutalist / Pop-Art" design system. Never deviate into standard "corporate clean" or "Apple-style" minimalism.
-
-- **Borders & Shadows (Critical):**
-  - NEVER use default Tailwind soft shadows (`shadow-md`, `shadow-lg`).
-  - All interactive cards, inputs, and buttons MUST use strict Neo-Brutalist utility classes with rounded corners (e.g., `rounded-2xl`, `rounded-full` for buttons).
-  - Borders MUST be thick: `border-4 border-black`.
-  - Shadows MUST be hard offsets: `shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`.
-  - Focus/Active states MUST translate slightly down/right and reduce the shadow offset to simulate a physical press.
-- **Color Palette (Strict Constraints):**
-  - **Base Background:** "Dirty paper" off-white (`#F4F4F0`) or pure white.
-  - **Primary Ink:** Pure black (`#000000`).
-  - **Accents:** Toxic/Mint Green or Neon Yellow/Chartreuse MUST be used strictly as decorative highlights/stickers, NOT as global backgrounds.
-  - **Negative/Cancel:** Harsh Red (`#FF0000`) is reserved exclusively for the "CANCELLED" stamp, negative scores, or deletions.
-- **Typography:**
-  - Strictly use Monospace fonts (e.g., Courier New, Space Mono). No generic sans-serif.
+- **UI work strictly follows `DESIGN.md`:** Do not invent styles. All design tokens (Neo-Brutalist thick borders, hard offset shadows, Space Mono typography, and `#F4F4F0` paper backgrounds) MUST be strictly referenced from the root `DESIGN.md` file.
 - **UI Freeze & Read-Only DOM (CRITICAL FOR EXISTING ARTIFACTS):**
   - ZERO UI MODIFICATION: When wiring backend logic, Supabase CRUD, or state management into existing components, YOU MUST NOT alter the existing HTML structure, CSS Grid/Flex layouts, or component nesting from the original Artifacts.
   - NO TRADITIONAL FORMS: Never inject generic corporate form paddings. Rely entirely on the original design artifacts (the "Receipt" aesthetic).
@@ -92,3 +78,12 @@ This project strictly adheres to a "Rounded Neo-Brutalist / Pop-Art" design syst
   - Semantic HTML is mandatory.
 - **Don'ts:**
   - DO NOT introduce heavy UI component libraries (like Material-UI or Ant Design). We build our own Neo-Brutalist components.
+
+### Build & Environment Commands
+When executing tasks or providing terminal instructions, strictly adhere to these project commands:
+- **Install Dependencies:** `npm install`
+- **Local Development:** `npm run dev` (Runs Next.js App Router on localhost)
+- **Design Tokens Generation (CRITICAL):** `npx @google/design.md export --format css-tailwind DESIGN.md > src/app/generated-theme.css` (Must be run if DESIGN.md is updated)
+- **Design System Linting:** `npx @google/design.md lint DESIGN.md`
+- **Testing:** `npm test` (Runs Jest unit tests)
+- **Build for Production:** `npm run build`

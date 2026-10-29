@@ -1,0 +1,15 @@
+@theme {
+  --color-primary: #000000;
+  --color-paper: #f4f4f0;
+  --color-ink: #000000;
+  --color-blood: #ff0000;
+  --color-mint: #98ff98;
+  --color-chartreuse: #dfff00;
+  --font-mono: "Space Mono";
+  --text-mono: 16px;
+  --leading-mono: 1.5;
+  --font-weight-mono: 400;
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+  --spacing-border-thick: 4px;
+}

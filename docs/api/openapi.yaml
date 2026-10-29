@@ -1,0 +1,12 @@
+openapi: 3.0.0
+info:
+  title: SubKiller API
+  version: 1.0.0
+  description: API specifications for SubKiller's edge functions and Supabase proxies.
+paths:
+  /api/health:
+    get:
+      summary: Check API health
+      responses:
+        '200':
+          description: OK

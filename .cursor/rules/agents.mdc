@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## 1. Project Context & Migration Architecture
 
-- **PRD Reference (CRITICAL):** Before starting any new feature or issue, read `prd_subkiller.md` at the repository root. It is the source for User Stories, Acceptance Criteria, and the core application logic.
+- **PRD Reference (CRITICAL):** Before starting any new feature or issue, read `docs/PRD.md`. It is the source for User Stories, Acceptance Criteria, and the core application logic.
 - **Folder Structure (Strict Enforcement):**
   - `/src/components`: Reusable UI widgets (e.g., neo-brutalist buttons, inputs, read-only badges).
   - `/src/app`: Next.js App Router pages and API routes.

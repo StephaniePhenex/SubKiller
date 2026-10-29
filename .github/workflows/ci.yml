@@ -1,0 +1,33 @@
+name: SubKiller CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Run Linters & Design Token Checks
+      run: |
+        npm run lint
+        npx @google/design.md lint DESIGN.md
+
+    - name: Run Unit Tests
+      # Note: Requires Jest to be configured (Issue #2)
+      run: npm test

@@ -41,7 +41,7 @@ SubKiller is an AI-driven, Neo-Brutalist web application designed to track, eval
   - Every push to `main` (a merged PR) deploys to Production.
   - Vercel builds independently of GitHub Actions: it deploys `main` even if `build-and-test` failed. The required check below is what keeps failing code out of `main`.
 - **Node.js:** CI reads `.nvmrc` (22). Vercel uses `engines.node` (`22.x`).
-- **Branch protection (admin, not yet configured):** add `build-and-test` as a required status check on `main`. Until then, a failing check is shown on the PR but does not block the merge.
+- **Branch protection:** the `Protect main branch` ruleset requires a pull request and a passing `build-and-test` check before merging into `main`, so a failing test blocks the merge. Only a repository admin can change this ruleset.
 
 ## Testing
 

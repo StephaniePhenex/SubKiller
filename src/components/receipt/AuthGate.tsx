@@ -27,8 +27,11 @@ export function AuthGate({
   const router = useRouter();
   const pathnameRef = useRef(pathname);
   const routerRef = useRef(router);
-  pathnameRef.current = pathname;
-  routerRef.current = router;
+
+  useEffect(() => {
+    pathnameRef.current = pathname;
+    routerRef.current = router;
+  }, [pathname, router]);
 
   useEffect(() => {
     const supabase = createClient();

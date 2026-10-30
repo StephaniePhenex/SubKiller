@@ -94,12 +94,12 @@ describe("subscriptions repository", () => {
       cost: 15.99,
       frequency: "monthly",
       feeling: "Kind of guilty.",
-      aiScore: 20,
-      verdict: "You rewatched one sitcom twice.",
     });
 
-    const insert = calls.find(([method]) => method === "insert");
-    expect(insert?.[1][0]).toEqual(expect.objectContaining({ user_id: USER_ID, name: "Netflix", ai_score: 20 }));
+    const payload = calls.find(([method]) => method === "insert")?.[1][0];
+    expect(payload).toEqual(expect.objectContaining({ user_id: USER_ID, name: "Netflix" }));
+    expect(payload).not.toHaveProperty("ai_score");
+    expect(payload).not.toHaveProperty("verdict");
     expect(created).toEqual(expect.objectContaining({ id: ROW_ID, userId: USER_ID }));
   });
 

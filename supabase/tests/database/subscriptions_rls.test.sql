@@ -5,7 +5,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(55);
+select plan(57);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures: two users with one subscription each (inserted as the table owner)
@@ -104,15 +104,25 @@ select set_config('request.jwt.claims',
   '{"sub": "11111111-1111-4111-8111-111111111111", "role": "authenticated"}', true);
 
 select lives_ok(
-  $$ insert into public.subscriptions (id, name, cost, frequency)
-     values ('a0000000-0000-4000-8000-000000000002', 'Spotify', 11.99, 'monthly') $$,
+  $$ insert into public.subscriptions (name, cost, frequency)
+     values ('Spotify', 11.99, 'monthly') $$,
   'user A can insert a row without naming user_id');
-select is((select user_id from public.subscriptions where id = 'a0000000-0000-4000-8000-000000000002'),
+select is((select user_id from public.subscriptions where name = 'Spotify'),
   '11111111-1111-4111-8111-111111111111'::uuid, 'user_id defaults to the signed-in user');
 select throws_ok(
   $$ insert into public.subscriptions (user_id, name, cost, frequency)
      values ('22222222-2222-4222-8222-222222222222', 'Planted', 9.99, 'monthly') $$,
   '42501', null, 'user A cannot insert a row owned by user B');
+
+-- The AI fields and the defaults cannot be chosen by the client on insert
+select throws_ok(
+  $$ insert into public.subscriptions (name, cost, frequency, ai_score, verdict)
+     values ('Forged', 5, 'monthly', 100, 'Keep it.') $$,
+  '42501', null, 'user A cannot insert their own ai_score and verdict');
+select throws_ok(
+  $$ insert into public.subscriptions (name, cost, frequency, created_at)
+     values ('Backdated', 5, 'monthly', now() - interval '1 year') $$,
+  '42501', null, 'user A cannot choose created_at on insert');
 
 -- ---------------------------------------------------------------------------
 -- Updates (as user A)
@@ -152,9 +162,9 @@ select is_empty(
   $$ delete from public.subscriptions where id = 'b0000000-0000-4000-8000-000000000001' returning id $$,
   'user A cannot delete user B''s row');
 select lives_ok(
-  $$ delete from public.subscriptions where id = 'a0000000-0000-4000-8000-000000000002' $$,
+  $$ delete from public.subscriptions where name = 'Spotify' $$,
   'user A can delete their own row');
-select is_empty($$ select id from public.subscriptions where id = 'a0000000-0000-4000-8000-000000000002' $$,
+select is_empty($$ select id from public.subscriptions where name = 'Spotify' $$,
   'user A''s deleted row is gone');
 
 -- ---------------------------------------------------------------------------
@@ -166,12 +176,6 @@ select throws_ok($$ insert into public.subscriptions (name, cost, frequency) val
   '23514', null, 'name cannot be blank');
 select throws_ok($$ insert into public.subscriptions (name, cost, frequency) values ('Daily', 5, 'daily') $$,
   '23514', null, 'frequency must be weekly, monthly, or yearly');
-select throws_ok(
-  $$ insert into public.subscriptions (name, cost, frequency, ai_score, verdict) values ('Overrated', 5, 'monthly', 101, 'Too high.') $$,
-  '23514', null, 'ai_score must be between 0 and 100');
-select throws_ok(
-  $$ insert into public.subscriptions (name, cost, frequency, ai_score) values ('Half scored', 5, 'monthly', 50) $$,
-  '23514', null, 'ai_score and verdict must be set together');
 
 -- ---------------------------------------------------------------------------
 -- User B's row survived everything user A tried
@@ -185,9 +189,22 @@ select results_eq(
   'user B still has exactly their original row, unchanged');
 
 -- ---------------------------------------------------------------------------
--- Deleting a user removes their subscriptions
+-- Score constraints (as the table owner, the trusted path that scores rows)
 -- ---------------------------------------------------------------------------
 reset role;
+
+select throws_ok(
+  $$ insert into public.subscriptions (user_id, name, cost, frequency, ai_score, verdict)
+     values ('11111111-1111-4111-8111-111111111111', 'Overrated', 5, 'monthly', 101, 'Too high.') $$,
+  '23514', null, 'ai_score must be between 0 and 100');
+select throws_ok(
+  $$ insert into public.subscriptions (user_id, name, cost, frequency, ai_score)
+     values ('11111111-1111-4111-8111-111111111111', 'Half scored', 5, 'monthly', 50) $$,
+  '23514', null, 'ai_score and verdict must be set together');
+
+-- ---------------------------------------------------------------------------
+-- Deleting a user removes their subscriptions
+-- ---------------------------------------------------------------------------
 delete from auth.users where id = '11111111-1111-4111-8111-111111111111';
 
 select is((select count(*)::int from public.subscriptions where user_id = '11111111-1111-4111-8111-111111111111'),

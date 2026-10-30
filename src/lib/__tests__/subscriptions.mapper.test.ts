@@ -52,32 +52,38 @@ describe("toSubscription", () => {
 
 describe("toInsertRow", () => {
   it("maps camelCase input to snake_case and sets the owner", () => {
-    expect(
-      toInsertRow(
-        { name: "Gym", cost: 54, frequency: "monthly", feeling: "I will go.", aiScore: 18, verdict: "Two visits." },
-        USER_ID,
-      ),
-    ).toEqual({
+    expect(toInsertRow({ name: "Gym", cost: 54, frequency: "monthly", feeling: "I will go." }, USER_ID)).toEqual({
       user_id: USER_ID,
       name: "Gym",
       cost: 54,
       frequency: "monthly",
       feeling: "I will go.",
-      ai_score: 18,
-      verdict: "Two visits.",
     });
   });
 
-  it("defaults feeling to empty and leaves the AI fields empty", () => {
+  it("defaults feeling to empty", () => {
     expect(toInsertRow({ name: "Gym", cost: 54, frequency: "monthly" }, USER_ID)).toEqual({
       user_id: USER_ID,
       name: "Gym",
       cost: 54,
       frequency: "monthly",
       feeling: "",
-      ai_score: null,
-      verdict: null,
     });
+  });
+
+  it("never sends a client-supplied AI score or verdict", () => {
+    const input = {
+      name: "Gym",
+      cost: 54,
+      frequency: "monthly",
+      aiScore: 100,
+      verdict: "Keep it.",
+    } as unknown as Parameters<typeof toInsertRow>[0];
+
+    const row = toInsertRow(input, USER_ID);
+
+    expect(row).not.toHaveProperty("ai_score");
+    expect(row).not.toHaveProperty("verdict");
   });
 });
 

@@ -1,31 +1,21 @@
-"use server";
+import { createClient } from "@/lib/supabase/server";
 
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-
-const LOCAL_SESSION = "subkiller-session";
-
-function hasSupabaseSession(jar: Awaited<ReturnType<typeof cookies>>) {
-  return jar.getAll().some((cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"));
-}
-
+/**
+ * The signed-in user, confirmed by Supabase. A cookie name is not a session:
+ * `getUser()` checks the token, and a missing or rejected user blocks the receipt shell.
+ */
 export async function getSignedInUser() {
-  const jar = await cookies();
-  const local = jar.get(LOCAL_SESSION)?.value;
-  if (local || hasSupabaseSession(jar)) return { id: local || "supabase" };
-  return null;
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) return null;
+    return { id: data.user.id };
+  } catch {
+    return null;
+  }
 }
 
-/** Stand-in for supabase.auth.signInWithOAuth until the Google provider is wired. */
-export async function enterSignedInShell() {
-  const jar = await cookies();
-  jar.set(LOCAL_SESSION, "signed-in", { httpOnly: true, sameSite: "lax", path: "/" });
-  redirect("/confess");
-}
-
-/** Stand-in for supabase.auth.signOut. A Supabase auth cookie is left for the provider to clear. */
-export async function leaveSignedInShell() {
-  const jar = await cookies();
-  jar.delete(LOCAL_SESSION);
-  redirect("/");
+/** The cookie stand-in is gone. Sign-in is Google OAuth only. */
+export async function enterSignedInShell(): Promise<never> {
+  throw new Error("Sign in with Google. A local session cookie is not a session.");
 }

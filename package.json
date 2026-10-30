@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest",
+    "test": "jest --watchAll=false",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "test:e2e": "start-server-and-test dev http://localhost:3000 cypress:run"
+    "test:e2e": "start-server-and-test dev http://localhost:3000 cypress:run",
+    "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p cypress"
   },
   "dependencies": {
     "lucide-react": "^1.62.0",

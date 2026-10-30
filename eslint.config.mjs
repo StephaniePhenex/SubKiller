@@ -5,6 +5,8 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // Read-only design prototype. Do not widen this to docs/**.
+  { ignores: ["docs/design/SubKillerApp.jsx"] },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -12,8 +14,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Reference design prototype, not app code (read-only per AGENTS.md §3).
-    "docs/**",
   ]),
 ]);
 

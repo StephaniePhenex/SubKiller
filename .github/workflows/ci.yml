@@ -43,3 +43,27 @@ jobs:
 
     - name: Build
       run: npm run build
+
+  db-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: '.nvmrc'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Start Local Supabase
+      # Applies supabase/migrations to a throwaway local database. Auth and
+      # Storage stay on because the tests use auth.users and storage.buckets.
+      run: npx supabase start -x realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+    - name: Run Database Tests (pgTAP)
+      run: npm run test:db

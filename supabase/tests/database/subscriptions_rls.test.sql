@@ -5,7 +5,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(57);
+select plan(59);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures: two users with one subscription each (inserted as the table owner)
@@ -119,6 +119,14 @@ select throws_ok(
   $$ insert into public.subscriptions (name, cost, frequency, ai_score, verdict)
      values ('Forged', 5, 'monthly', 100, 'Keep it.') $$,
   '42501', null, 'user A cannot insert their own ai_score and verdict');
+select throws_ok(
+  $$ insert into public.subscriptions (name, cost, frequency, ai_score)
+     values ('Forged score', 5, 'monthly', 100) $$,
+  '42501', null, 'user A cannot insert an ai_score on its own');
+select throws_ok(
+  $$ insert into public.subscriptions (name, cost, frequency, verdict)
+     values ('Forged verdict', 5, 'monthly', 'Keep it.') $$,
+  '42501', null, 'user A cannot insert a verdict on its own');
 select throws_ok(
   $$ insert into public.subscriptions (name, cost, frequency, created_at)
      values ('Backdated', 5, 'monthly', now() - interval '1 year') $$,

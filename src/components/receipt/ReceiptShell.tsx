@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Mic, PencilLine, Skull } from "lucide-react";
 import { leaveSignedInShell } from "@/lib/auth";
 import { INK, MINT, MONO, PAPER, ROUTES, WHITE } from "./palette";
 import { SubscriptionProvider, useSubscriptions } from "./SubscriptionState";
 import { NeoButton, Rule } from "./ui";
+
+function emptySubscribe() {
+  return () => {};
+}
 
 const NAV_ITEMS = [
   { href: ROUTES.confess, label: "Confess", icon: Mic },
@@ -26,11 +30,11 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { subscriptions } = useSubscriptions();
-  const [today, setToday] = useState("");
-
-  useEffect(() => {
-    setToday(new Date().toLocaleDateString());
-  }, []);
+  const today = useSyncExternalStore(
+    emptySubscribe,
+    () => new Date().toLocaleDateString(),
+    () => "",
+  );
 
   const onLogout = () => {
     void leaveSignedInShell();

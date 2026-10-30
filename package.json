@@ -36,5 +36,8 @@
     "start-server-and-test": "^3.0.13",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

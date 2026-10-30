@@ -1,13 +1,19 @@
 "use client";
 
 import { LogIn } from "lucide-react";
-import { enterSignedInShell } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 import { CHART, INK, MONO, PAPER, WHITE } from "./palette";
 import { Rule } from "./ui";
 
 export function LoginGate() {
   const onLogin = () => {
-    void enterSignedInShell();
+    const redirectTo = new URL("/auth/callback", window.location.origin);
+    redirectTo.searchParams.set("next", "/confess");
+    const supabase = createClient();
+    void supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: redirectTo.toString() },
+    });
   };
 
   return (

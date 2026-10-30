@@ -12,8 +12,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Reference design prototype, not app code (read-only per AGENTS.md §3).
-    "docs/**",
   ]),
 ]);
 

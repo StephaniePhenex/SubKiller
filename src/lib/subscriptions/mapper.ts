@@ -24,6 +24,7 @@ export function toSubscription(row: SubscriptionRow): Subscription {
   };
 }
 
+/** Copies only the insertable fields; the database rejects a client-supplied score anyway. */
 export function toInsertRow(input: NewSubscription, userId: string): SubscriptionInsertRow {
   return {
     user_id: userId,
@@ -31,8 +32,6 @@ export function toInsertRow(input: NewSubscription, userId: string): Subscriptio
     cost: input.cost,
     frequency: input.frequency,
     feeling: input.feeling ?? "",
-    ai_score: input.aiScore ?? null,
-    verdict: input.verdict ?? null,
   };
 }
 

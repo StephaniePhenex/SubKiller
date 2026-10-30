@@ -4,7 +4,8 @@ type Table = Database["public"]["Tables"]["subscriptions"];
 
 /** A `subscriptions` row exactly as Postgres returns it (snake_case). */
 export type SubscriptionRow = Table["Row"];
-export type SubscriptionInsertRow = Table["Insert"];
+/** The columns a client may insert. The AI score, verdict, id, and created_at are not among them. */
+export type SubscriptionInsertRow = Pick<Table["Insert"], "user_id" | "name" | "cost" | "frequency" | "feeling">;
 export type SubscriptionUpdateRow = Pick<Table["Update"], "name" | "cost" | "frequency" | "feeling">;
 
 export type Frequency = "weekly" | "monthly" | "yearly";
@@ -23,14 +24,13 @@ export type Subscription = {
   createdAt: string;
 };
 
+/** What a user confesses. The AI score and verdict are added later by the server, never by the client. */
 export type NewSubscription = {
   name: string;
   cost: number;
   frequency: Frequency;
   feeling?: string;
-  aiScore?: number | null;
-  verdict?: string | null;
 };
 
 /** The fields a user may edit after saving. The score, verdict, and owner are fixed. */
-export type SubscriptionPatch = Partial<Pick<NewSubscription, "name" | "cost" | "frequency" | "feeling">>;
+export type SubscriptionPatch = Partial<NewSubscription>;

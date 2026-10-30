@@ -44,9 +44,12 @@ create policy "subscriptions_delete_own" on public.subscriptions
   for delete to authenticated
   using ((select auth.uid()) = user_id);
 
--- Signed-out users get nothing. Signed-in users may edit only the fields they
--- typed: user_id (ownership), ai_score and verdict (the immutable reality
--- check), id, and created_at cannot be updated.
+-- Signed-out users get nothing. Signed-in users may write only the fields they
+-- typed. ai_score and verdict (the immutable reality check) can be neither
+-- inserted nor updated by a client; a trusted server path scores the row
+-- (Issue #9). id and created_at keep their defaults, and user_id is set on
+-- insert (checked by RLS) but can never be changed.
 revoke all on table public.subscriptions from anon, authenticated;
-grant select, insert, delete on table public.subscriptions to authenticated;
+grant select, delete on table public.subscriptions to authenticated;
+grant insert (user_id, name, cost, frequency, feeling) on table public.subscriptions to authenticated;
 grant update (name, cost, frequency, feeling) on table public.subscriptions to authenticated;

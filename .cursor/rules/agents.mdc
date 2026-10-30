@@ -6,6 +6,12 @@ alwaysApply: true
 # SubKiller - Context Engineering Rules
 
 ## 1. Project Context & Migration Architecture
+- **Tech Stack & Versions:**
+  - Node.js: v22.x (pinned via `.nvmrc`)
+  - Next.js: 16.4.3 (App Router strictly enforced)
+  - React & React DOM: 19.3.0
+  - Supabase: `@supabase/supabase-js` (Pending installation in backend integration phase)
+  - Styling: Tailwind CSS (Standard utility classes only)
 
 - **PRD Reference (CRITICAL):** Before starting any new feature or issue, read `docs/PRD.md`. It is the source for User Stories, Acceptance Criteria, and the core application logic.
 - **Folder Structure (Strict Enforcement):**
@@ -76,9 +82,11 @@ This project strictly adheres to a "Rounded Neo-Brutalist / Pop-Art" design syst
   - Example: `feat(#4): implement what-if simulator state recalculation`
 - **Pull Request Workflow:**
   - All generated code must be modular. When implementing an issue, explicitly state which Acceptance Criteria from the GitHub Issue are being fulfilled.
+- **PR Workflow & Required Reviews:** All Pull Requests require at least 1 approving review from a Tech Lead and must pass the `build-and-test` CI status check before the Merge button is enabled.
+- **In-Code Issue Referencing:** Any temporary workarounds, pending features, or technical debt must include the GitHub issue number in the inline comment (e.g., `// TODO(#42): refactor after Supabase Auth is merged`).
 
 ## 7. Testing Strategy (STRICT TDD MANDATE)
-
+- **Coverage Goals:** Minimum 80% line coverage for business logic (`/src/lib`) and state management. 100% pass rate on core user flows in E2E.
 - **STRICT RED-GREEN-REFACTOR ENFORCEMENT (CRITICAL):**
   - **You MUST write failing tests and wait for the commit BEFORE generating implementation code.**
   - Do not bypass this rule. If a feature is requested, output the test file first.

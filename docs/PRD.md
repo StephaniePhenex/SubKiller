@@ -4,7 +4,12 @@
 - **Product Name:** SubKiller (The Honest Sub)
 - **Core Concept:** A frictionless, AI-driven financial reality check that exposes the true cost of subscription waste. It transforms the dreaded chore of financial auditing into a highly satisfying, gamified act of reclaiming personal wealth by confronting the "Subjective Perception Gap."
 - **Target Output:** A brutal, cold financial reality check presented as a CVS receipt or a satirical "death certificate" for canceled subscriptions, ready to be screenshotted and flexed on social media.
-- **UI/UX Aesthetic:** **Rounded Neo-Brutalism / Pop-Art.** Dirty white paper (`#F4F4F0`), thick black borders (`border-4`), pill-shaped buttons (`rounded-full`), hard black offset shadows (`shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`), and monospace typography. High-contrast neon accents (Mint Green, Chartreuse, Harsh Red) are used strictly as decorative stickers, not as main backgrounds.
+- **UI/UX Aesthetic:** **Rounded Neo-Brutalism / Pop-Art.** Thick black borders (`border-4`) and pill-shaped buttons (`rounded-full`).
+  * **Hex codes:** Paper `#F4F4F0`, Ink `#000000`, Harsh Red `#FF0000`, Mint `#8CEDB0`, and Chartreuse `#E2FB72`.
+  * **Shadows:** `10px 10px 0 #000000` for the main receipt and the poster, `6px 6px 0 #000000` for buttons and standard cards, and `4px 4px 0 #000000` for small cards and inputs. Compact elements use `3px 3px 0 #000000`: the delete button, the CANCELLED stamp, and the Review score badge. The delete button hover is `2px 2px 0 #000000`, translated down and right. An invalid input uses a harsh red offset, `4px 4px 0 #FF0000`, instead of black.
+  * **Neon color:** Chartreuse (`#E2FB72`) fills the TOTAL MONEY BLED panel, the Login button, and the selected Review frequency chip (Weekly, Monthly, or Yearly). Mint (`#8CEDB0`) fills the active navigation pill (Confess, Review, or Graveyard). The Mic button is Chartreuse when Ready, Ink (`#000000`) when Recording, and White (`#FFFFFF`) when Processing.
+  * **Radius:** 24px (`rounded-3xl`) for the receipt shell, Login card, TOTAL MONEY BLED panel, and poster. 16px (`rounded-2xl`) for inner cards, including Graveyard rows.
+  * **Font weight:** Space Mono is strictly 400 and 700. `font-weight: 400` is reserved for general body copy. `font-weight: 700` (`font-bold`) is used for headings, buttons, form labels, totals, and the poster stamps.
 
 ## 2. Core User Stories (US0 - US5)
 
@@ -12,7 +17,8 @@
   * **Description:** As a user, I need to log in securely so my financial data remains private across sessions.
   * **Acceptance Criteria:** 
     * A brutalist landing page with a giant "Login with Google" button.
-    * Utilizes Supabase OAuth (Google Provider) to strictly satisfy the JWT/OAuth grading rubric requirement.
+    * Utilizes Supabase Auth with the Google OAuth provider, so each session is a Supabase JWT.
+    * The receipt shell treats a request as signed in when a `subkiller-session` cookie or an `sb-*-auth-token` cookie is present. The local cookie is the stand-in until Google OAuth is connected.
 
 - **US1: Voice Input & Confession**
   * **Description:** Log subscriptions quickly by speaking out details (name, cost, usage frequency, subjective feeling) to bypass tedious manual form entry.
@@ -25,7 +31,7 @@
   * **Description:** Receive an objective 0-100 score and a blunt one-sentence reality check based on cost, frequency, and sentiment.
   * **Acceptance Criteria:**
     * Output is strictly constrained to a JSON format containing `score` (0-100) and `verdict`.
-    * Rendered as a compact, read-only Pop-Art badge (e.g., toxic yellow for 0-40, green for 70-100) aligned horizontally with the verdict text. **The user CANNOT edit this score; it is an immutable reality check.**
+    * Rendered as a compact, read-only Pop-Art badge aligned horizontally with the verdict text. Harsh Red (`#FF0000`) for scores under 30, Chartreuse (`#E2FB72`) for 30–69, and Mint (`#8CEDB0`) for 70 and above. **The user CANNOT edit this score; it is an immutable reality check.**
 
 - **US3: Subscription Graveyard Dashboard**
   * **Description:** View all identified "vampire" subscriptions in a highly legible, receipt-like list.
@@ -44,7 +50,7 @@
   * **Description:** See the total aggregated waste/savings calculated dynamically.
   * **Acceptance Criteria:**
     * Backend calculates the baseline total utilizing a database aggregate query (e.g., SQL SUM).
-    * Displayed at the top in massive, aggressive typography ("TOTAL MONEY BLED: $XXX/Year").
+    * Displayed at the top in massive, aggressive typography ("TOTAL MONEY BLED: $XXX/Year") on a Chartreuse (`#E2FB72`) background.
     * Dynamically recalculates in real-time when the What-If Simulator (US4) is toggled or when an item is deleted.
 
 ## 3. Core Business Logic & Boundaries
@@ -53,7 +59,7 @@
   * A purely visual reward mechanism replacing complex image export logic to prevent CORS/rendering bugs.
   * Triggered by a "GENERATE MY POSTER" button at the bottom of the Graveyard.
   * Opens a full-screen CSS-only Modal structured like a CVS receipt or death certificate.
-  * Includes a massive CSS stamp effect (`transform: rotate(-15deg); border: 8px solid #FF0000; color: #FF0000; font-weight: 900;`) stating "REST IN PEACE" or "CANCELLED".
+  * Includes a massive CSS stamp effect (`transform: rotate(-15deg); border: 8px solid #FF0000; color: #FF0000; font-weight: 700;`) stating "REST IN PEACE" or "CANCELLED". The stamp is Space Mono at weight 700 (`font-bold`).
   * Prompts the user to "Screenshot to flex" (**NO external libraries like `html2canvas` allowed**).
 
 - **Data Privacy Boundary:**
@@ -62,8 +68,8 @@
 ## 4. Non-Functional Requirements & Architecture
 
 - **Tech Stack:**
-  * Frontend: Next.js (App Router) + React + Tailwind CSS + Lucide React.
-  * Backend & Database: Next.js API Routes + Supabase (PostgreSQL).
+  * Frontend: Next.js 16 App Router + React 19 + Tailwind CSS + Lucide React.
+  * Backend & Database: Supabase (PostgreSQL and Auth), accessed through the Supabase client.
 - **Data Management (Security Ironclad):**
   * Strict Row Level Security (RLS) enforced per `user_id` in Supabase. Absolutely no database operations can omit the `user_id` context.
   * Table names must be plural `snake_case`, and mapped to `camelCase` in the React frontend.

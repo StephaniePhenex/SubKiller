@@ -65,7 +65,7 @@ This project strictly adheres to a "Rounded Neo-Brutalist / Pop-Art" design syst
 ## 5. Core Business Logic & Data Boundaries
 
 - **The What-If Savings Simulator:**
-  - Checking or unchecking items in the Graveyard MUST instantly recalculate the 'TOTAL MONEY SAVED' figure.
+  - Checking or unchecking items in the Graveyard MUST instantly recalculate the 'TOTAL MONEY BLED' figure.
   - This calculation relies on **pure client-side React state** for zero-latency UX.
   - DO NOT make round-trip database/API calls just to toggle a simulator checkbox.
 - **Voice Input State Machine:**

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { NeoButton } from "@/components/NeoButton";
+import { NeoButton } from "@/components/receipt/ui";
 
 describe("NeoButton", () => {
   it("renders an accessible button with its label", () => {

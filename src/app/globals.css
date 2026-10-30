@@ -1,2 +1,8 @@
 @import "tailwindcss";
 @import "./generated-theme.css";
+
+@theme {
+  --shadow-receipt-sm: 4px 4px 0 #000000;
+  --shadow-receipt: 6px 6px 0 #000000;
+  --shadow-receipt-lg: 10px 10px 0 #000000;
+}

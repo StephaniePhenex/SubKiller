@@ -3,13 +3,18 @@
   --color-paper: #f4f4f0;
   --color-ink: #000000;
   --color-blood: #ff0000;
-  --color-mint: #98ff98;
-  --color-chartreuse: #dfff00;
+  --color-mint: #8cedb0;
+  --color-chartreuse: #e2fb72;
   --font-mono: "Space Mono";
+  --font-mono-bold: "Space Mono";
   --text-mono: 16px;
+  --text-mono-bold: 16px;
   --leading-mono: 1.5;
+  --leading-mono-bold: 1.5;
   --font-weight-mono: 400;
+  --font-weight-mono-bold: 700;
   --radius-card: 16px;
+  --radius-shell: 24px;
   --radius-pill: 9999px;
   --spacing-border-thick: 4px;
 }

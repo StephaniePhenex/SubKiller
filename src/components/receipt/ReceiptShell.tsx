@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Mic, PencilLine, Skull } from "lucide-react";
-import { leaveSignedInShell } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 import { INK, MINT, MONO, PAPER, ROUTES, WHITE } from "./palette";
 import { SubscriptionProvider, useSubscriptions } from "./SubscriptionState";
 import { NeoButton, Rule } from "./ui";
@@ -37,7 +37,8 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
   );
 
   const onLogout = () => {
-    void leaveSignedInShell();
+    const supabase = createClient();
+    void supabase.auth.signOut();
   };
 
   return (

@@ -3,6 +3,8 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Skull } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { NotAuthenticatedError, createSubscription } from "@/lib/subscriptions/repository";
 import { toMonthly, type Frequency } from "./data";
 import { useSubscriptions } from "./SubscriptionState";
 import { BLOOD, CHART, INK, MINT, PAPER, ROUTES, WHITE } from "./palette";
@@ -54,6 +56,8 @@ export function ReviewView() {
   const [draft, setDraft] = useState(MOCK_EXTRACTED_FIELDS);
   const ai = MOCK_AI_RESULT;
   const [errors, setErrors] = useState<{ name?: string; cost?: string }>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const update = (key: keyof typeof draft, value: string) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -68,26 +72,49 @@ export function ReviewView() {
     return next;
   };
 
-  const submitToGraveyard = () => {
+  const submitToGraveyard = async () => {
     const found = validate();
     if (Object.keys(found).length) {
       setErrors(found);
       return;
     }
+    if (saving) return;
 
-    const entry = {
-      id: `sub_${Date.now()}`,
-      name: draft.name.trim(),
-      cost: Math.round(parseFloat(draft.cost) * 100) / 100,
-      frequency: draft.frequency,
-      feeling: draft.feeling.trim(),
-      aiScore: ai.aiScore,
-      verdict: ai.verdict,
-      killed: ai.aiScore < 30,
-    };
+    setSaving(true);
+    setSaveError(null);
 
-    setSubscriptions((prev) => [...prev, entry]);
-    router.push(ROUTES.graveyard);
+    const name = draft.name.trim();
+    const cost = Math.round(parseFloat(draft.cost) * 100) / 100;
+    const feeling = draft.feeling.trim();
+
+    try {
+      const saved = await createSubscription(createClient(), {
+        name,
+        cost,
+        frequency: draft.frequency,
+        feeling,
+      });
+
+      setSubscriptions((prev) => [
+        ...prev,
+        {
+          id: saved.id,
+          name: saved.name,
+          cost: saved.cost,
+          frequency: saved.frequency,
+          feeling: saved.feeling,
+          aiScore: ai.aiScore,
+          verdict: ai.verdict,
+          killed: ai.aiScore < 30,
+        },
+      ]);
+      router.push(ROUTES.graveyard);
+    } catch (error) {
+      setSaving(false);
+      setSaveError(
+        error instanceof NotAuthenticatedError ? error.message : "Could not file this subscription. Try again.",
+      );
+    }
   };
 
   const band = scoreBand(ai.aiScore);
@@ -214,13 +241,19 @@ export function ReviewView() {
       <div className="pr-2 pb-2">
         <NeoButton
           onClick={submitToGraveyard}
+          disabled={saving}
           aria-label="Submit to Graveyard"
           className="w-full flex items-center justify-center gap-3 py-5 text-2xl"
-          style={{ background: INK, color: WHITE }}
+          style={{ background: INK, color: WHITE, opacity: saving ? 0.5 : 1 }}
         >
           <Skull size={28} strokeWidth={2.5} aria-hidden="true" />
           <span>Submit to Graveyard</span>
         </NeoButton>
+        {saveError && (
+          <p className="mt-3 text-sm font-bold text-center" style={{ color: BLOOD }} role="alert">
+            {saveError}
+          </p>
+        )}
       </div>
     </Card>
   );

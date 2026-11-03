@@ -18,9 +18,11 @@ function confirmedSession(session: { user: { id: string } | null } | null): Gate
 export function AuthGate({
   children,
   initialSession,
+  holdE2ESession = false,
 }: {
   children: React.ReactNode;
   initialSession?: GateSession;
+  holdE2ESession?: boolean;
 }) {
   const [session, setSession] = useState<GateSession | null | undefined>(initialSession);
   const pathname = usePathname();
@@ -39,6 +41,7 @@ export function AuthGate({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, next) => {
       const confirmed = confirmedSession(next);
+      if (!confirmed && holdE2ESession) return;
       setSession(confirmed);
       if (!confirmed && RECEIPT_ROUTES.includes(pathnameRef.current)) {
         routerRef.current.replace("/");
@@ -46,7 +49,7 @@ export function AuthGate({
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [holdE2ESession]);
 
   if (session) return children;
   if (session === undefined) return null;

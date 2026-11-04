@@ -135,7 +135,7 @@ export function ReviewView() {
 
     // The server scores the stored row and saves the verdict; only the row id is sent.
     const scored = await scoreSubscription(id);
-    const entry = scored.ok ? fromStoredSubscription(scored.subscription) : null;
+    const entry = scored.ok && scored.subscription.aiScore !== null ? fromStoredSubscription(scored.subscription) : null;
     if (!entry) {
       setSaving(false);
       setSaveError("Filed, but the verdict couldn't be recorded. Try again.");

@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Camera, Skull, X } from "lucide-react";
-import { money, toMonthly, type Subscription } from "./data";
+import { createClient } from "@/lib/supabase/client";
+import { NotAuthenticatedError, deleteSubscription, listSubscriptions } from "@/lib/subscriptions/repository";
+import { sortByScore } from "@/lib/subscriptions/sort";
+import { fromStoredSubscription, money, toMonthly, type Subscription } from "./data";
 import { GraveyardList } from "./GraveyardList";
 import { useSubscriptions } from "./SubscriptionState";
 import { BLOOD, CHART, INK, MONO, PAPER, WHITE } from "./palette";
@@ -126,19 +129,94 @@ function PosterModal({ killed, savedYearly, onClose }: { killed: Subscription[];
   );
 }
 
+type LoadState =
+  | { status: "loading" }
+  | { status: "ready" }
+  | { status: "error"; message: string; retryable: boolean };
+
+/**
+ * Stored rows replace the in-memory list. A row the user already toggled this
+ * session keeps its cancel mark, unless its score changed since.
+ */
+function mergeLoaded(prev: Subscription[], rows: Subscription[]): Subscription[] {
+  const seen = new Map(prev.map((s) => [s.id, s]));
+  return rows.map((row) => {
+    const before = seen.get(row.id);
+    return before && before.aiScore === row.aiScore ? { ...row, killed: before.killed } : row;
+  });
+}
+
 export function GraveyardView() {
   // Shared with Review, so a subscription filed there shows up here with its stored score.
   const { subscriptions, setSubscriptions } = useSubscriptions();
   const [posterOpen, setPosterOpen] = useState(false);
+  const [load, setLoad] = useState<LoadState>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
+  const [deletingIds, setDeletingIds] = useState<ReadonlySet<string>>(new Set());
+  // Mirrors deletingIds synchronously, so rapid clicks never send a second delete.
+  const pendingDeletes = useRef(new Set<string>());
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const totalYearly = subscriptions.reduce((sum, s) => sum + yearly(s), 0);
-  const savedYearly = subscriptions.filter((s) => s.killed).reduce((sum, s) => sum + yearly(s), 0);
+  useEffect(() => {
+    // Set on unmount or a newer load, so a late response never overwrites newer state.
+    let stale = false;
+    listSubscriptions(createClient()).then(
+      (rows) => {
+        if (stale) return;
+        setSubscriptions((prev) => mergeLoaded(prev, rows.map(fromStoredSubscription)));
+        setLoad({ status: "ready" });
+      },
+      (error: unknown) => {
+        if (stale) return;
+        const signedOut = error instanceof NotAuthenticatedError;
+        setLoad({
+          status: "error",
+          message: signedOut ? error.message : "Couldn't load your subscriptions.",
+          // Retrying cannot help a signed-out user.
+          retryable: !signedOut,
+        });
+      },
+    );
+    return () => {
+      stale = true;
+    };
+  }, [attempt, setSubscriptions]);
+
+  // Until the list has loaded, totals and bulk actions see nothing, so they never count rows that are not on screen.
+  const ready = load.status === "ready";
+  const visible = ready ? subscriptions : [];
+  const totalYearly = visible.reduce((sum, s) => sum + yearly(s), 0);
+  const savedYearly = visible.filter((s) => s.killed).reduce((sum, s) => sum + yearly(s), 0);
   const stillBleeding = totalYearly - savedYearly;
-  const killedCount = subscriptions.filter((s) => s.killed).length;
-  const sorted = [...subscriptions].sort((a, b) => a.aiScore - b.aiScore);
+  const killedCount = visible.filter((s) => s.killed).length;
+  const sorted = sortByScore(visible);
+
+  const retry = () => {
+    setDeleteError(null);
+    setLoad({ status: "loading" });
+    setAttempt((n) => n + 1);
+  };
 
   const toggleKill = (id: string) => setSubscriptions((prev) => prev.map((s) => (s.id === id ? { ...s, killed: !s.killed } : s)));
-  const deleteSub = (id: string) => setSubscriptions((prev) => prev.filter((s) => s.id !== id));
+
+  // Delete is not cancel: it removes the row from Supabase and from the list, and never changes a `killed` flag.
+  const deleteSub = async (id: string) => {
+    if (pendingDeletes.current.has(id)) return;
+    const name = subscriptions.find((s) => s.id === id)?.name ?? "that subscription";
+    pendingDeletes.current.add(id);
+    setDeletingIds(new Set(pendingDeletes.current));
+    setDeleteError(null);
+    try {
+      await deleteSubscription(createClient(), id);
+      setSubscriptions((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      setDeleteError(`Couldn't delete ${name}. Try again.`);
+    } finally {
+      pendingDeletes.current.delete(id);
+      setDeletingIds(new Set(pendingDeletes.current));
+    }
+  };
+
   const setAll = (killed: boolean) => setSubscriptions((prev) => prev.map((s) => ({ ...s, killed })));
 
   return (
@@ -170,17 +248,42 @@ export function GraveyardView() {
         <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
           <h2 className="text-2xl font-bold">The graveyard</h2>
           <div className="flex gap-3 pr-2 pb-2">
-            <NeoButton className="px-4 py-1 text-sm" onClick={() => setAll(true)} aria-label="Kill all">
+            <NeoButton className="px-4 py-1 text-sm" onClick={() => setAll(true)} disabled={!ready} aria-label="Kill all">
               Kill all
             </NeoButton>
-            <NeoButton className="px-4 py-1 text-sm" onClick={() => setAll(false)} aria-label="Spare all">
+            <NeoButton className="px-4 py-1 text-sm" onClick={() => setAll(false)} disabled={!ready} aria-label="Spare all">
               Spare all
             </NeoButton>
           </div>
         </div>
         <p className="text-sm mb-4">Check a subscription to cancel it. Worst scores first.</p>
 
-        <GraveyardList subscriptions={sorted} onToggle={toggleKill} onDelete={deleteSub} />
+        {deleteError && (
+          <p className="mb-4 text-sm font-bold" style={{ color: BLOOD }} role="alert">
+            {deleteError}
+          </p>
+        )}
+
+        {load.status === "loading" && (
+          <p className="border-4 border-black rounded-2xl p-4" role="status">
+            Digging up your subscriptions…
+          </p>
+        )}
+        {load.status === "error" && (
+          <div className="border-4 border-black rounded-2xl p-4 flex flex-col gap-4" role="alert">
+            <p className="font-bold">{load.message}</p>
+            {load.retryable && (
+              <div className="pr-2 pb-2">
+                <NeoButton className="px-5 py-2" onClick={retry} aria-label="Try again">
+                  Try again
+                </NeoButton>
+              </div>
+            )}
+          </div>
+        )}
+        {load.status === "ready" && (
+          <GraveyardList subscriptions={sorted} deletingIds={deletingIds} onToggle={toggleKill} onDelete={deleteSub} />
+        )}
       </div>
 
       <div className="pr-2 pb-2">

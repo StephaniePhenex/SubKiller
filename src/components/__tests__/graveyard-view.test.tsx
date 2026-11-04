@@ -194,6 +194,68 @@ describe("Graveyard list from Supabase", () => {
     renderGraveyard();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Sign in to manage your subscriptions.");
+    // Retrying cannot sign anyone in, so no retry is offered.
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
+  it("keeps totals and bulk actions off rows that are not on screen while the list cannot load", async () => {
+    let fail = false;
+    installClient(() => (fail ? { data: null, error: { message: "network down" } } : { data: [GYM], error: null }));
+    const { rerender } = render(
+      <SubscriptionProvider>
+        <GraveyardView />
+      </SubscriptionProvider>,
+    );
+    await screen.findByRole("checkbox", { name: "Cancel Unused Gym" });
+    expect(within(screen.getByText("TOTAL MONEY BLED:").closest("section")!).getByText("$588.00")).toBeInTheDocument();
+
+    // Leave and come back while Supabase is down: the gym is still in shared state, but not on screen.
+    fail = true;
+    rerender(<SubscriptionProvider>{null}</SubscriptionProvider>);
+    rerender(
+      <SubscriptionProvider>
+        <GraveyardView />
+      </SubscriptionProvider>,
+    );
+    await screen.findByRole("alert");
+
+    const totalCard = screen.getByText("TOTAL MONEY BLED:").closest("section")!;
+    expect(within(totalCard).queryByText("$588.00")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kill all" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Spare all" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Generate my poster" })).toBeDisabled();
+  });
+
+  it("clears an old delete error when the list is reloaded", async () => {
+    let failLoad = false;
+    installClient((ops) => {
+      if (isDeleteOp(ops)) return { data: null, error: { message: "permission denied" } };
+      return failLoad ? { data: null, error: { message: "network down" } } : { data: [NETFLIX], error: null };
+    });
+    const { rerender } = render(
+      <SubscriptionProvider>
+        <GraveyardView />
+      </SubscriptionProvider>,
+    );
+    await screen.findByRole("checkbox", { name: "Cancel Netflix" });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Delete Netflix from the list" }));
+    });
+    expect(await screen.findByText("Couldn't delete Netflix. Try again.")).toBeInTheDocument();
+
+    failLoad = true;
+    rerender(<SubscriptionProvider>{null}</SubscriptionProvider>);
+    rerender(
+      <SubscriptionProvider>
+        <GraveyardView />
+      </SubscriptionProvider>,
+    );
+    await screen.findByText("Couldn't load your subscriptions.");
+    failLoad = false;
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    await screen.findByRole("checkbox", { name: "Cancel Netflix" });
+    expect(screen.queryByText("Couldn't delete Netflix. Try again.")).not.toBeInTheDocument();
   });
 
   it("ignores a stale response that arrives after a newer load", async () => {
@@ -312,6 +374,10 @@ describe("Graveyard delete", () => {
     fireEvent.click(button);
 
     expect(button).toBeDisabled();
+    // The delete query starts after the auth check resolves; wait for it, then make sure no second one follows.
+    await waitFor(() => expect(deletes()).toHaveLength(1));
+    fireEvent.click(button);
+    await act(async () => {});
     expect(deletes()).toHaveLength(1);
 
     await act(async () => release({ data: [{ id: NETFLIX.id }], error: null }));

@@ -13,6 +13,13 @@ export class NotAuthenticatedError extends Error {
   }
 }
 
+export class SubscriptionNotDeletedError extends Error {
+  constructor() {
+    super("No matching subscription was deleted.");
+    this.name = "SubscriptionNotDeletedError";
+  }
+}
+
 export class VerdictNotRecordedError extends Error {
   constructor() {
     super("No unscored subscription matched, so the verdict was not recorded.");
@@ -42,7 +49,8 @@ export async function listSubscriptions(client: Client): Promise<Subscription[]>
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) fail(error);
-  return (data ?? []).map(toSubscription);
+  // RLS and the filter above already scope the rows; this keeps a foreign row out of the UI regardless.
+  return (data ?? []).filter((row) => row.user_id === userId).map(toSubscription);
 }
 
 /** One of the signed-in user's subscriptions, or null if it does not exist or is someone else's. */
@@ -110,8 +118,18 @@ export async function updateSubscription(
   return toSubscription(data);
 }
 
+/**
+ * Permanently removes one of the user's rows. Throws SubscriptionNotDeletedError
+ * when nothing matched, so a caller never hides a row that is still stored.
+ */
 export async function deleteSubscription(client: Client, id: string): Promise<void> {
   const userId = await requireUserId(client);
-  const { error } = await client.from("subscriptions").delete().eq("id", id).eq("user_id", userId);
+  const { data, error } = await client
+    .from("subscriptions")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select("id");
   if (error) fail(error);
+  if (!data?.length) throw new SubscriptionNotDeletedError();
 }

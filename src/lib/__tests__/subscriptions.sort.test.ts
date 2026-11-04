@@ -48,7 +48,7 @@ describe("sortByScore", () => {
 
   it("does not mutate the records it was given", () => {
     const list = [item("a", "High", 90), item("b", "Low", 10)];
-    const before = structuredClone(list);
+    const before = JSON.parse(JSON.stringify(list));
 
     const sorted = sortByScore(list);
 

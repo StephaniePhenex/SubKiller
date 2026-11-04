@@ -1,8 +1,9 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Mic, Trash2 } from "lucide-react";
 import { money, toMonthly, type Subscription } from "./data";
-import { BLOOD, INK, PAPER, WHITE } from "./palette";
+import { BLOOD, INK, PAPER, ROUTES, WHITE } from "./palette";
 import { ScoreBadge } from "./ScoreBadge";
 
 const yearly = (s: Subscription) => toMonthly(s.cost, s.frequency) * 12;
@@ -21,7 +22,17 @@ function KillCheckbox({ id, checked, onChange, label }: { id: string; checked: b
   );
 }
 
-function GraveCard({ sub, onToggle, onDelete }: { sub: Subscription; onToggle: () => void; onDelete: () => void }) {
+function GraveCard({
+  sub,
+  deleting,
+  onToggle,
+  onDelete,
+}: {
+  sub: Subscription;
+  deleting: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
   const checkboxId = `kill-${sub.id}`;
 
   return (
@@ -37,7 +48,13 @@ function GraveCard({ sub, onToggle, onDelete }: { sub: Subscription; onToggle: (
             >
               {sub.name}
             </span>
-            <ScoreBadge score={sub.aiScore} size="compact" />
+            {sub.aiScore !== null ? (
+              <ScoreBadge score={sub.aiScore} size="compact" />
+            ) : (
+              <span className="shrink-0 border-2 border-black rounded-full px-3 py-1 text-sm font-bold leading-none">
+                Not scored yet
+              </span>
+            )}
           </div>
 
           <div className="mt-1 text-sm">
@@ -47,7 +64,16 @@ function GraveCard({ sub, onToggle, onDelete }: { sub: Subscription; onToggle: (
           {sub.verdict && <p className="mt-2 text-sm italic">“{sub.verdict}”</p>}
         </label>
 
-        <button type="button" onClick={onDelete} className="neo-del shrink-0" aria-label={`Delete ${sub.name} from the list`} title="Delete from list">
+        {/* Delete is outside the label, so it never toggles the cancel checkbox. */}
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className="neo-del shrink-0"
+          style={deleting ? { opacity: 0.5, cursor: "wait" } : undefined}
+          aria-label={`Delete ${sub.name} from the list`}
+          title="Delete from list"
+        >
           <Trash2 size={18} strokeWidth={2.75} aria-hidden="true" />
         </button>
       </div>
@@ -74,21 +100,45 @@ function GraveCard({ sub, onToggle, onDelete }: { sub: Subscription; onToggle: (
 
 export function GraveyardList({
   subscriptions,
+  deletingIds,
   onToggle,
   onDelete,
 }: {
   subscriptions: Subscription[];
+  /** Rows with a delete in flight; their delete button is disabled. */
+  deletingIds?: ReadonlySet<string>;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
   if (subscriptions.length === 0) {
-    return <p className="border-4 border-black rounded-2xl p-4">Nothing buried yet. Record a subscription on the Confess page.</p>;
+    return (
+      <div className="border-4 border-black rounded-2xl p-4 flex flex-col gap-4">
+        <p>Nothing buried yet. Record a subscription on the Confess page.</p>
+        <div className="pr-2 pb-2">
+          <Link
+            href={ROUTES.confess}
+            aria-label="Confess a subscription"
+            className="neo-btn inline-flex items-center gap-2 border-4 border-black rounded-full font-bold px-5 py-2"
+            style={{ background: WHITE, color: INK }}
+          >
+            <Mic size={18} strokeWidth={2.75} aria-hidden="true" />
+            Confess a subscription
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
     <ul className="flex flex-col gap-4">
       {subscriptions.map((s) => (
-        <GraveCard key={s.id} sub={s} onToggle={() => onToggle(s.id)} onDelete={() => onDelete(s.id)} />
+        <GraveCard
+          key={s.id}
+          sub={s}
+          deleting={deletingIds?.has(s.id) ?? false}
+          onToggle={() => onToggle(s.id)}
+          onDelete={() => onDelete(s.id)}
+        />
       ))}
     </ul>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { INITIAL_SUBSCRIPTIONS, type Subscription } from "./data";
+import type { Subscription } from "./data";
 
 type SubscriptionState = {
   subscriptions: Subscription[];
@@ -11,7 +11,8 @@ type SubscriptionState = {
 const SubscriptionContext = createContext<SubscriptionState | null>(null);
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
-  const [subscriptions, setSubscriptions] = useState(INITIAL_SUBSCRIPTIONS);
+  // Starts empty: the Graveyard fills it from Supabase, never from the prototype samples.
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   return <SubscriptionContext.Provider value={{ subscriptions, setSubscriptions }}>{children}</SubscriptionContext.Provider>;
 }
 

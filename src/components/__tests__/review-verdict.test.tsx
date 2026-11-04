@@ -54,17 +54,24 @@ type Call = [method: string, args: unknown[]];
 
 function installClient() {
   const calls: Call[] = [];
+  let inserting = false;
   const builder: Record<string, unknown> = {};
   for (const method of ["select", "insert", "update", "delete", "eq", "order", "single"]) {
     builder[method] = (...args: unknown[]) => {
       calls.push([method, args]);
+      if (method === "insert") inserting = true;
       return builder;
     };
   }
+  // The insert returns the saved row. The Graveyard's list query (Issue #10) starts empty,
+  // so the filed row reaches it through the shared subscription state.
   builder.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
-    Promise.resolve({ data: savedRow, error: null }).then(resolve, reject);
+    Promise.resolve({ data: inserting ? savedRow : [], error: null }).then(resolve, reject);
   jest.mocked(createClient).mockReturnValue({
-    from: jest.fn(() => builder),
+    from: jest.fn(() => {
+      inserting = false;
+      return builder;
+    }),
     auth: { getUser: jest.fn(async () => ({ data: { user: { id: USER_ID } }, error: null })) },
   } as never);
   return { inserts: () => calls.filter(([method]) => method === "insert") };

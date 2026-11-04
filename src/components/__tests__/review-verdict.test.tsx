@@ -207,6 +207,9 @@ describe("Review page AI verdict", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("Filed, but the verdict couldn't be recorded. Try again.");
     expect(mockPush).not.toHaveBeenCalled();
+    // The row is already filed as entered, so the fields lock: a retry re-scores that stored row.
+    expect(screen.getByRole("spinbutton", { name: "Cost ($)" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "Subscription" })).toBeDisabled();
 
     await submit();
 

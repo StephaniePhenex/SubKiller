@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Camera, Skull, X } from "lucide-react";
-import { INITIAL_SUBSCRIPTIONS, money, toMonthly, type Subscription } from "./data";
+import { money, toMonthly, type Subscription } from "./data";
 import { GraveyardList } from "./GraveyardList";
+import { useSubscriptions } from "./SubscriptionState";
 import { BLOOD, CHART, INK, MONO, PAPER, WHITE } from "./palette";
 import { NeoButton, Rule } from "./ui";
 
@@ -126,7 +127,8 @@ function PosterModal({ killed, savedYearly, onClose }: { killed: Subscription[];
 }
 
 export function GraveyardView() {
-  const [subscriptions, setSubscriptions] = useState(INITIAL_SUBSCRIPTIONS);
+  // Shared with Review, so a subscription filed there shows up here with its stored score.
+  const { subscriptions, setSubscriptions } = useSubscriptions();
   const [posterOpen, setPosterOpen] = useState(false);
 
   const totalYearly = subscriptions.reduce((sum, s) => sum + yearly(s), 0);

@@ -2,15 +2,10 @@
 
 import { Trash2 } from "lucide-react";
 import { money, toMonthly, type Subscription } from "./data";
-import { BLOOD, CHART, INK, MINT, PAPER, WHITE } from "./palette";
+import { BLOOD, INK, PAPER, WHITE } from "./palette";
+import { ScoreBadge } from "./ScoreBadge";
 
 const yearly = (s: Subscription) => toMonthly(s.cost, s.frequency) * 12;
-
-const scoreBand = (score: number) => {
-  if (score < 30) return { label: "Kill it", background: BLOOD, color: WHITE };
-  if (score < 70) return { label: "Think hard", background: CHART, color: INK };
-  return { label: "Keep it", background: MINT, color: INK };
-};
 
 function KillCheckbox({ id, checked, onChange, label }: { id: string; checked: boolean; onChange: () => void; label: string }) {
   return (
@@ -27,7 +22,6 @@ function KillCheckbox({ id, checked, onChange, label }: { id: string; checked: b
 }
 
 function GraveCard({ sub, onToggle, onDelete }: { sub: Subscription; onToggle: () => void; onDelete: () => void }) {
-  const band = scoreBand(sub.aiScore);
   const checkboxId = `kill-${sub.id}`;
 
   return (
@@ -43,13 +37,7 @@ function GraveCard({ sub, onToggle, onDelete }: { sub: Subscription; onToggle: (
             >
               {sub.name}
             </span>
-            <span
-              className="shrink-0 border-2 border-black rounded-full px-3 py-1 font-bold leading-none"
-              style={{ background: band.background, color: band.color }}
-              title={band.label}
-            >
-              {sub.aiScore}
-            </span>
+            <ScoreBadge score={sub.aiScore} size="compact" />
           </div>
 
           <div className="mt-1 text-sm">

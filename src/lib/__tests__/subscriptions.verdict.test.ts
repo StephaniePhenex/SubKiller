@@ -153,6 +153,19 @@ describe("scoreStoredSubscription", () => {
     expect(admin.from).not.toHaveBeenCalled();
   });
 
+  it("returns the winning score when a parallel request scored the row first", async () => {
+    // First read: unscored. The guarded write matches nothing (someone else won). Re-read: scored.
+    const user = fakeClient({ results: [{ data: unscoredRow, error: null }, { data: scoredRow, error: null }] });
+    const admin = fakeClient({ results: [{ data: null, error: null }] });
+
+    const result = await scoreStoredSubscription(
+      { userClient: user.client, adminClient: admin.client, provider: provider(JSON.stringify({ score: 40, verdict: "Late." })) },
+      ROW_ID,
+    );
+
+    expect(result).toEqual({ ok: true, subscription: expect.objectContaining({ aiScore: 18, verdict: VERDICT }) });
+  });
+
   it("keeps an existing score: an already scored row is returned unchanged and never re-scored", async () => {
     const user = fakeClient({ results: [{ data: scoredRow, error: null }] });
     const admin = fakeClient();

@@ -20,3 +20,15 @@ export function getSupabaseEnv(): SupabaseEnv {
 
   return { url, publishableKey };
 }
+
+/**
+ * Server-only secret key for the trusted scoring write (Issue #9). It has no
+ * NEXT_PUBLIC_ prefix, so Next.js never puts it in the browser bundle.
+ */
+export function getSupabaseSecretKey(): string {
+  const key = process.env.SUPABASE_SECRET_KEY;
+  if (!key) {
+    throw new Error("Missing SUPABASE_SECRET_KEY. Add it to .env.local for server-side scoring (see .env.example).");
+  }
+  return key;
+}

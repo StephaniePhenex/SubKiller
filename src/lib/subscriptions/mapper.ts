@@ -1,3 +1,4 @@
+import type { AiVerdict } from "@/lib/ai/verdict";
 import type {
   Frequency,
   NewSubscription,
@@ -6,6 +7,7 @@ import type {
   SubscriptionPatch,
   SubscriptionRow,
   SubscriptionUpdateRow,
+  SubscriptionVerdictRow,
 } from "./types";
 
 export function toSubscription(row: SubscriptionRow): Subscription {
@@ -43,4 +45,9 @@ export function toUpdateRow(patch: SubscriptionPatch): SubscriptionUpdateRow {
   if (patch.frequency !== undefined) row.frequency = patch.frequency;
   if (patch.feeling !== undefined) row.feeling = patch.feeling;
   return row;
+}
+
+/** Maps a validated verdict to its snake_case columns. */
+export function toVerdictRow(verdict: AiVerdict): SubscriptionVerdictRow {
+  return { ai_score: verdict.aiScore, verdict: verdict.verdict };
 }

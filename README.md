@@ -26,6 +26,7 @@ SubKiller is an AI-driven, Neo-Brutalist web application designed to track, eval
 | --- | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Public (sent to the browser) | `.env.local`; Vercel → Settings → Environment Variables (Preview + Production) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (`sb_publishable_...`), protected by RLS | Public (sent to the browser) | `.env.local`; Vercel → Settings → Environment Variables (Preview + Production) |
+| `SUPABASE_SECRET_KEY` | Supabase secret key (`sb_secret_...`). Used by one server write only: recording the AI score and verdict (Issue #9) | **Server only.** Bypasses RLS; never prefix with `NEXT_PUBLIC_` | `.env.local`; Vercel → Settings → Environment Variables (Preview + Production), marked Sensitive |
 
 - `.env.example` lists every variable with placeholder values. Never commit real values: `.env*` files other than `.env.example` are git-ignored.
 - Server-only secrets (for example a Supabase service-role key or an AI provider key) must not use the `NEXT_PUBLIC_` prefix. Store them only in Vercel environment variables, and in GitHub Actions secrets only if a CI step needs them.

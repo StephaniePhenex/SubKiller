@@ -5,7 +5,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(59);
+select plan(61);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures: two users with one subscription each (inserted as the table owner)
@@ -209,6 +209,29 @@ select throws_ok(
   $$ insert into public.subscriptions (user_id, name, cost, frequency, ai_score)
      values ('11111111-1111-4111-8111-111111111111', 'Half scored', 5, 'monthly', 50) $$,
   '23514', null, 'ai_score and verdict must be set together');
+
+-- ---------------------------------------------------------------------------
+-- The trusted scoring path (Issue #9): the server's service_role records the
+-- score on an unscored row. Clients still cannot (checked above).
+-- ---------------------------------------------------------------------------
+insert into public.subscriptions (id, user_id, name, cost, frequency)
+values ('a0000000-0000-4000-8000-000000000009', '11111111-1111-4111-8111-111111111111', 'To score', 54, 'monthly');
+
+set local role service_role;
+
+select lives_ok(
+  $$ update public.subscriptions set ai_score = 18, verdict = 'Two visits since January.'
+     where id = 'a0000000-0000-4000-8000-000000000009'
+       and user_id = '11111111-1111-4111-8111-111111111111'
+       and ai_score is null $$,
+  'service_role can record the score and verdict on an unscored row');
+
+reset role;
+
+select results_eq(
+  $$ select ai_score::int, verdict from public.subscriptions where id = 'a0000000-0000-4000-8000-000000000009' $$,
+  $$ values (18, 'Two visits since January.'::text) $$,
+  'the score and verdict land on that row');
 
 -- ---------------------------------------------------------------------------
 -- Deleting a user removes their subscriptions

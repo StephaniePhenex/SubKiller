@@ -1,3 +1,6 @@
+import { isMarkedToCancel } from "@/lib/ai/score";
+import type { Subscription as StoredSubscription } from "@/lib/subscriptions/types";
+
 export type Frequency = "weekly" | "monthly" | "yearly";
 
 export type Subscription = {
@@ -40,6 +43,25 @@ export const INITIAL_SUBSCRIPTIONS: Subscription[] = [
     killed: false,
   },
 ];
+
+/**
+ * A stored row as a Graveyard card. The cancel mark comes from the stored
+ * score, so it is the same after a refresh. Unscored rows return null: the
+ * card never shows a score the server did not store.
+ */
+export function fromStoredSubscription(sub: StoredSubscription): Subscription | null {
+  if (sub.aiScore === null || sub.verdict === null) return null;
+  return {
+    id: sub.id,
+    name: sub.name,
+    cost: sub.cost,
+    frequency: sub.frequency,
+    feeling: sub.feeling,
+    aiScore: sub.aiScore,
+    verdict: sub.verdict,
+    killed: isMarkedToCancel(sub.aiScore),
+  };
+}
 
 export const toMonthly = (cost: number, frequency: Frequency) => {
   if (frequency === "yearly") return cost / 12;

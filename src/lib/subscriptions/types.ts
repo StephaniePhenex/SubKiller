@@ -7,6 +7,8 @@ export type SubscriptionRow = Table["Row"];
 /** The columns a client may insert. The AI score, verdict, id, and created_at are not among them. */
 export type SubscriptionInsertRow = Pick<Table["Insert"], "user_id" | "name" | "cost" | "frequency" | "feeling">;
 export type SubscriptionUpdateRow = Pick<Table["Update"], "name" | "cost" | "frequency" | "feeling">;
+/** The score columns. Written once, by the trusted server path only (Issue #9). */
+export type SubscriptionVerdictRow = Required<Pick<Table["Update"], "ai_score" | "verdict">>;
 
 export type Frequency = "weekly" | "monthly" | "yearly";
 

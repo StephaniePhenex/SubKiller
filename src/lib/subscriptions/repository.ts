@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AiVerdict } from "@/lib/ai/verdict";
 import type { Database } from "@/lib/supabase/database.types";
-import { toInsertRow, toSubscription, toUpdateRow } from "./mapper";
+import { toInsertRow, toSubscription, toUpdateRow, toVerdictRow } from "./mapper";
 import type { NewSubscription, Subscription, SubscriptionPatch } from "./types";
 
 type Client = SupabaseClient<Database>;
@@ -9,6 +10,13 @@ export class NotAuthenticatedError extends Error {
   constructor() {
     super("Sign in to manage your subscriptions.");
     this.name = "NotAuthenticatedError";
+  }
+}
+
+export class VerdictNotRecordedError extends Error {
+  constructor() {
+    super("No unscored subscription matched, so the verdict was not recorded.");
+    this.name = "VerdictNotRecordedError";
   }
 }
 
@@ -35,6 +43,43 @@ export async function listSubscriptions(client: Client): Promise<Subscription[]>
     .order("created_at", { ascending: false });
   if (error) fail(error);
   return (data ?? []).map(toSubscription);
+}
+
+/** One of the signed-in user's subscriptions, or null if it does not exist or is someone else's. */
+export async function getSubscription(client: Client, id: string): Promise<Subscription | null> {
+  const userId = await requireUserId(client);
+  const { data, error } = await client
+    .from("subscriptions")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) fail(error);
+  return data ? toSubscription(data) : null;
+}
+
+/**
+ * Records the AI verdict on a row. Trusted server path only: `client` must be
+ * the secret-key admin client, because the column grants stop signed-in users
+ * from writing these columns. The caller passes the owner it already verified,
+ * and the write only matches a row that is still unscored, so an existing
+ * score is never overwritten.
+ */
+export async function recordVerdict(
+  client: Client,
+  { id, userId, verdict }: { id: string; userId: string; verdict: AiVerdict },
+): Promise<Subscription> {
+  const { data, error } = await client
+    .from("subscriptions")
+    .update(toVerdictRow(verdict))
+    .eq("id", id)
+    .eq("user_id", userId)
+    .is("ai_score", null)
+    .select("*")
+    .maybeSingle();
+  if (error) fail(error);
+  if (!data) throw new VerdictNotRecordedError();
+  return toSubscription(data);
 }
 
 export async function createSubscription(client: Client, input: NewSubscription): Promise<Subscription> {

@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Skull } from "lucide-react";
+import { previewVerdict, scoreSubscription } from "@/app/(app)/review/actions";
+import { scoreBand } from "@/lib/ai/score";
+import type { AiVerdict } from "@/lib/ai/verdict";
 import { createClient } from "@/lib/supabase/client";
 import { NotAuthenticatedError, createSubscription } from "@/lib/subscriptions/repository";
-import { toMonthly, type Frequency } from "./data";
+import { fromStoredSubscription, toMonthly, type Frequency } from "./data";
+import { ScoreBadge } from "./ScoreBadge";
 import { useSubscriptions } from "./SubscriptionState";
-import { BLOOD, CHART, INK, MINT, PAPER, ROUTES, WHITE } from "./palette";
+import { BLOOD, CHART, INK, PAPER, ROUTES, WHITE } from "./palette";
 import { Card, NeoButton, Rule } from "./ui";
 
 const MOCK_EXTRACTED_FIELDS = {
@@ -38,22 +42,19 @@ function confessionFields(initial?: Partial<ConfessionFields>): ConfessionFields
   };
 }
 
-const MOCK_AI_RESULT = Object.freeze({
-  aiScore: 20,
-  verdict: "You rewatched one sitcom twice. That's $192 a year for comfort noise.",
-});
-
 const FREQUENCIES: { id: Frequency; label: string }[] = [
   { id: "weekly", label: "Weekly" },
   { id: "monthly", label: "Monthly" },
   { id: "yearly", label: "Yearly" },
 ];
 
-const scoreBand = (score: number) => {
-  if (score < 30) return { label: "Kill it", background: BLOOD, color: WHITE };
-  if (score < 70) return { label: "Think hard", background: CHART, color: INK };
-  return { label: "Keep it", background: MINT, color: INK };
-};
+/** Wait for typing to pause before asking the server to re-score. */
+const PREVIEW_DELAY_MS = 300;
+
+type Preview =
+  | { status: "loading" }
+  | { status: "ready"; verdict: AiVerdict; isMock: boolean }
+  | { status: "unavailable" };
 
 function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
   return (
@@ -75,10 +76,35 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
   const router = useRouter();
   const { setSubscriptions } = useSubscriptions();
   const [draft, setDraft] = useState(() => confessionFields(initialFields));
-  const ai = MOCK_AI_RESULT;
+  const [preview, setPreview] = useState<Preview>({ status: "loading" });
+  const previewRequest = useRef(0);
+  // Set once the row is filed, so a retry after a scoring failure never files a second row.
+  const [savedId, setSavedId] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ name?: string; cost?: string }>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // The score is read-only: it is always computed by the server from the fields, never typed in.
+  useEffect(() => {
+    const request = ++previewRequest.current;
+    const timer = setTimeout(async () => {
+      const cost = parseFloat(draft.cost);
+      let next: Preview = { status: "unavailable" };
+      try {
+        const result = await previewVerdict({
+          name: draft.name.trim(),
+          cost: Number.isFinite(cost) ? cost : 0,
+          frequency: draft.frequency,
+          feeling: draft.feeling.trim(),
+        });
+        if (result.ok) next = { status: "ready", verdict: result.verdict, isMock: result.isMock };
+      } catch {
+        // A dropped request leaves the verdict unavailable, never stale.
+      }
+      if (request === previewRequest.current) setPreview(next);
+    }, PREVIEW_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [draft.name, draft.cost, draft.frequency, draft.feeling]);
 
   const update = (key: keyof typeof draft, value: string) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -108,37 +134,38 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
     const cost = Math.round(parseFloat(draft.cost) * 100) / 100;
     const feeling = draft.feeling.trim();
 
-    try {
-      const saved = await createSubscription(createClient(), {
-        name,
-        cost,
-        frequency: draft.frequency,
-        feeling,
-      });
-
-      setSubscriptions((prev) => [
-        ...prev,
-        {
-          id: saved.id,
-          name: saved.name,
-          cost: saved.cost,
-          frequency: saved.frequency,
-          feeling: saved.feeling,
-          aiScore: ai.aiScore,
-          verdict: ai.verdict,
-          killed: ai.aiScore < 30,
-        },
-      ]);
-      router.push(ROUTES.graveyard);
-    } catch (error) {
-      setSaving(false);
-      setSaveError(
-        error instanceof NotAuthenticatedError ? error.message : "Could not file this subscription. Try again.",
-      );
+    let id = savedId;
+    if (!id) {
+      try {
+        const saved = await createSubscription(createClient(), {
+          name,
+          cost,
+          frequency: draft.frequency,
+          feeling,
+        });
+        id = saved.id;
+        setSavedId(id);
+      } catch (error) {
+        setSaving(false);
+        setSaveError(
+          error instanceof NotAuthenticatedError ? error.message : "Could not file this subscription. Try again.",
+        );
+        return;
+      }
     }
-  };
 
-  const band = scoreBand(ai.aiScore);
+    // The server scores the stored row and saves the verdict; only the row id is sent.
+    const scored = await scoreSubscription(id);
+    const entry = scored.ok ? fromStoredSubscription(scored.subscription) : null;
+    if (!entry) {
+      setSaving(false);
+      setSaveError("Filed, but the verdict couldn't be recorded. Try again.");
+      return;
+    }
+
+    setSubscriptions((prev) => [...prev, entry]);
+    router.push(ROUTES.graveyard);
+  };
 
   return (
     <Card>
@@ -156,7 +183,8 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
         </div>
       </div>
 
-      <div className="flex flex-col gap-6">
+      {/* Locked once the row is filed: a retry re-scores that stored row, so later edits would be lost. */}
+      <fieldset disabled={!!savedId} className="flex flex-col gap-6 border-0 p-0 m-0 min-w-0">
         <Field id="sub-name" label="Subscription" error={errors.name}>
           <input
             id="sub-name"
@@ -226,7 +254,7 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
             aria-label="How you feel about it"
           />
         </Field>
-      </div>
+      </fieldset>
 
       <Rule />
 
@@ -235,26 +263,32 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
           <h3 id="ai-verdict-heading" className="text-xl font-bold leading-tight">
             The AI&apos;s verdict
           </h3>
-          <div className="flex items-center gap-3">
-            <span
-              className="shrink-0 border-4 border-black rounded-full px-3 py-1 text-lg font-bold leading-none"
-              style={{
-                background: band.background,
-                color: band.color,
-                boxShadow: `3px 3px 0 0 ${INK}`,
-              }}
-              role="img"
-              aria-label={`Importance score ${ai.aiScore} out of 100`}
-            >
-              {ai.aiScore}
-            </span>
-            <span className="text-lg font-bold leading-none whitespace-nowrap">{band.label}</span>
-          </div>
+          {preview.status === "ready" && (
+            <div className="flex items-center gap-3">
+              <ScoreBadge score={preview.verdict.aiScore} />
+              <span className="text-lg font-bold leading-none whitespace-nowrap">
+                {scoreBand(preview.verdict.aiScore).label}
+              </span>
+            </div>
+          )}
         </div>
 
-        <p className="border-4 border-black rounded-2xl p-4 italic" style={{ background: PAPER }}>
-          “{ai.verdict}”
-        </p>
+        {preview.status === "ready" ? (
+          <>
+            <p className="border-4 border-black rounded-2xl p-4 italic" style={{ background: PAPER }}>
+              “{preview.verdict.verdict}”
+            </p>
+            {preview.isMock && (
+              <p className="text-sm">Demo scoring: built-in rules, not an AI model. The score is set when you file.</p>
+            )}
+          </>
+        ) : (
+          <p className="border-4 border-black rounded-2xl p-4" style={{ background: PAPER }} role="status">
+            {preview.status === "loading"
+              ? "Scoring…"
+              : "The verdict isn't ready. Check the fields above, then try again."}
+          </p>
+        )}
       </section>
 
       <Rule />

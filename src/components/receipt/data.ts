@@ -8,8 +8,9 @@ export type Subscription = {
   name: string;
   cost: number;
   frequency: Frequency;
-  aiScore: number;
-  verdict: string;
+  /** Null until the server has scored the row. */
+  aiScore: number | null;
+  verdict: string | null;
   killed: boolean;
   feeling?: string;
 };
@@ -46,11 +47,10 @@ export const INITIAL_SUBSCRIPTIONS: Subscription[] = [
 
 /**
  * A stored row as a Graveyard card. The cancel mark comes from the stored
- * score, so it is the same after a refresh. Unscored rows return null: the
- * card never shows a score the server did not store.
+ * score, so it is the same after a refresh. An unscored row keeps a null
+ * score: the card never shows a score the server did not store.
  */
-export function fromStoredSubscription(sub: StoredSubscription): Subscription | null {
-  if (sub.aiScore === null || sub.verdict === null) return null;
+export function fromStoredSubscription(sub: StoredSubscription): Subscription {
   return {
     id: sub.id,
     name: sub.name,

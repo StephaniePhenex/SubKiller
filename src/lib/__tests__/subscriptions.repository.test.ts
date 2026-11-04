@@ -1,5 +1,6 @@
 import {
   NotAuthenticatedError,
+  SubscriptionNotDeletedError,
   createSubscription,
   deleteSubscription,
   listSubscriptions,
@@ -116,13 +117,30 @@ describe("subscriptions repository", () => {
   });
 
   it("deletes only the user's own row", async () => {
-    const { client, calls } = fakeClient({ result: { data: null, error: null } });
+    const { client, calls } = fakeClient({ result: { data: [{ id: ROW_ID }], error: null } });
 
     await deleteSubscription(client, ROW_ID);
 
     expect(hasCall(calls, "delete")).toBe(true);
     expect(hasCall(calls, "eq", "id", ROW_ID)).toBe(true);
     expect(hasCall(calls, "eq", "user_id", USER_ID)).toBe(true);
+    // Returning the deleted ids is how the caller knows a row was really removed.
+    expect(hasCall(calls, "select", "id")).toBe(true);
+  });
+
+  it("throws when nothing was deleted, so the UI never hides a row that is still stored", async () => {
+    const { client } = fakeClient({ result: { data: [], error: null } });
+
+    await expect(deleteSubscription(client, ROW_ID)).rejects.toBeInstanceOf(SubscriptionNotDeletedError);
+  });
+
+  it("never returns another user's row from the list, even if one slipped past the query", async () => {
+    const foreign = { ...row, id: "b0000000-0000-4000-8000-000000000001", user_id: "22222222-2222-4222-8222-222222222222" };
+    const { client } = fakeClient({ result: { data: [row, foreign], error: null } });
+
+    const subscriptions = await listSubscriptions(client);
+
+    expect(subscriptions.map((s) => s.id)).toEqual([ROW_ID]);
   });
 
   it("surfaces database errors to the caller", async () => {

@@ -32,7 +32,15 @@ describe("fromStoredSubscription", () => {
     expect(fromStoredSubscription({ ...base, aiScore, verdict: "Fine." })?.killed).toBe(false);
   });
 
-  it("returns null for a row that has not been scored yet, so no score is invented", () => {
-    expect(fromStoredSubscription({ ...base, aiScore: null, verdict: null })).toBeNull();
+  it("keeps a row that has not been scored yet, with no score invented and no cancel mark", () => {
+    expect(fromStoredSubscription({ ...base, aiScore: null, verdict: null })).toEqual(
+      expect.objectContaining({ id: base.id, aiScore: null, verdict: null, killed: false }),
+    );
+  });
+
+  it("keeps a stored score of 0 as 0, not as missing", () => {
+    expect(fromStoredSubscription({ ...base, aiScore: 0, verdict: "Worthless." })).toEqual(
+      expect.objectContaining({ aiScore: 0, killed: true }),
+    );
   });
 });

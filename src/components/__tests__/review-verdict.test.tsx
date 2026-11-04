@@ -72,6 +72,7 @@ function installClient() {
       inserting = false;
       return builder;
     }),
+    rpc: jest.fn(async () => ({ data: 0, error: null })),
     auth: { getUser: jest.fn(async () => ({ data: { user: { id: USER_ID } }, error: null })) },
   } as never);
   return { inserts: () => calls.filter(([method]) => method === "insert") };

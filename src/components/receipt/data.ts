@@ -69,4 +69,7 @@ export const toMonthly = (cost: number, frequency: Frequency) => {
   return cost;
 };
 
-export const money = (n: number) => `$${n.toFixed(2)}`;
+const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+/** "$1,200.00". Never shows NaN: a non-finite amount renders as a dash. */
+export const money = (n: number) => (Number.isFinite(n) ? USD.format(n) : "—");

@@ -1,4 +1,5 @@
 import type { Frequency } from "@/lib/subscriptions/types";
+import { YEARLY_FACTOR } from "@/lib/subscriptions/yearly";
 
 /** What the scorer sees: the confession's cost, frequency, and sentiment. */
 export type VerdictInput = {
@@ -18,8 +19,6 @@ export type VerdictProvider = {
   isMock: boolean;
   complete(input: VerdictInput): Promise<string>;
 };
-
-const PER_YEAR: Record<Frequency, number> = { weekly: 52, monthly: 12, yearly: 1 };
 
 const NEGATIVE = ["never", "forget", "forgot", "guilty", "waste", "rarely", "barely", "hate", "don't use", "regret", "useless", "unused"];
 const POSITIVE = ["love", "daily", "every day", "use it", "need", "essential", "worth", "favorite", "all the time", "for work"];
@@ -50,7 +49,7 @@ export const mockVerdictProvider: VerdictProvider = {
   id: "deterministic-mock",
   isMock: true,
   async complete({ name, cost, frequency, feeling }) {
-    const yearly = cost * PER_YEAR[frequency];
+    const yearly = cost * YEARLY_FACTOR[frequency];
     const raw = 60 - Math.min(40, Math.round(yearly / 15)) + sentiment(feeling);
     const score = Math.max(0, Math.min(100, raw));
 

@@ -20,6 +20,13 @@ export class SubscriptionNotDeletedError extends Error {
   }
 }
 
+export class InvalidAggregateError extends Error {
+  constructor(value: unknown) {
+    super(`The yearly total from the database is not a valid amount: ${JSON.stringify(value)}`);
+    this.name = "InvalidAggregateError";
+  }
+}
+
 export class VerdictNotRecordedError extends Error {
   constructor() {
     super("No unscored subscription matched, so the verdict was not recorded.");
@@ -51,6 +58,24 @@ export async function listSubscriptions(client: Client): Promise<Subscription[]>
   if (error) fail(error);
   // RLS and the filter above already scope the rows; this keeps a foreign row out of the UI regardless.
   return (data ?? []).filter((row) => row.user_id === userId).map(toSubscription);
+}
+
+/**
+ * The signed-in user's yearly subscription total, computed by the
+ * `yearly_bleed` Postgres SUM (RLS applies; no user id is sent). Postgres
+ * numeric may arrive as a number or a string; anything that is not a finite,
+ * non-negative amount is rejected. Rounded to whole cents.
+ */
+export async function getYearlyBleed(client: Client): Promise<number> {
+  await requireUserId(client);
+  const { data, error } = await client.rpc("yearly_bleed");
+  if (error) fail(error);
+
+  const value: unknown = data;
+  const amount =
+    typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+  if (!Number.isFinite(amount) || amount < 0) throw new InvalidAggregateError(value);
+  return Math.round(amount * 100) / 100;
 }
 
 /** One of the signed-in user's subscriptions, or null if it does not exist or is someone else's. */

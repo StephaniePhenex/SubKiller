@@ -84,10 +84,10 @@ function installClient(user: { id: string } | null, result = { data: savedRow, e
   return { calls, from };
 }
 
-function renderReview() {
+function renderReview(initialFields?: { name: string; cost: string; frequency: "weekly" | "monthly" | "yearly"; feeling: string }) {
   return render(
     <SubscriptionProvider>
-      <ReviewView />
+      <ReviewView initialFields={initialFields} />
     </SubscriptionProvider>,
   );
 }
@@ -126,6 +126,35 @@ describe("confession review form", () => {
     expect(feeling).toHaveValue("Barely watch it.");
     expect(screen.getByText("Hulu")).toBeInTheDocument();
     expect(screen.getByText("≈ $119.88 / year")).toBeInTheDocument();
+  });
+
+  it("prefills and submits confession fields passed in by the caller", async () => {
+    const { calls } = installClient({ id: USER_ID });
+    renderReview({
+      name: "Spotify",
+      cost: "11.99",
+      frequency: "yearly",
+      feeling: "Worth it for the commute.",
+    });
+
+    expect(screen.getByRole("textbox", { name: "Subscription" })).toHaveValue("Spotify");
+    expect(screen.getByRole("spinbutton", { name: "Cost ($)" })).toHaveValue(11.99);
+    expect(screen.getByRole("textbox", { name: "How you feel about it" })).toHaveValue("Worth it for the commute.");
+    expect(screen.getByRole("button", { name: "Yearly" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Monthly" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("≈ $11.99 / year")).toBeInTheDocument();
+
+    await submit();
+
+    const payload = calls.find(([method]) => method === "insert")?.[1][0];
+    expect(payload).toEqual({
+      user_id: USER_ID,
+      name: "Spotify",
+      cost: 11.99,
+      frequency: "yearly",
+      feeling: "Worth it for the commute.",
+    });
+    expect(mockPush).toHaveBeenCalledWith("/graveyard");
   });
 
   it("uses a pressed toggle for weekly, monthly, and yearly and updates the yearly cost", () => {

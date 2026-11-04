@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { createClient } from "@/lib/supabase/client";
 import { SubscriptionProvider } from "@/components/receipt/SubscriptionState";
 import { GraveyardView } from "@/components/receipt/GraveyardView";
+import { BLOOD } from "@/components/receipt/palette";
 
 jest.mock("@/lib/supabase/client", () => ({
   createClient: jest.fn(),
@@ -364,5 +365,90 @@ describe("deleting with the baseline and the simulator", () => {
 
     expect(writes()).toHaveLength(1);
     expect(writes()[0].some(([m]) => m === "delete")).toBe(true);
+  });
+});
+
+describe("death-certificate poster", () => {
+  beforeEach(() => {
+    jest.mocked(createClient).mockReset();
+    document.body.style.overflow = "scroll";
+  });
+
+  afterEach(() => {
+    document.body.style.overflow = "";
+  });
+
+  async function checkStreamingAndOpen() {
+    installClient();
+    renderGraveyard();
+    await loaded();
+
+    const trigger = screen.getByRole("button", { name: "Generate my poster" });
+    expect(trigger).toBeDisabled();
+    expect(screen.getByText("Check at least one subscription to make a poster.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Cancel Streaming" }));
+    expect(trigger).toBeEnabled();
+    expect(screen.queryByText("Check at least one subscription to make a poster.")).not.toBeInTheDocument();
+
+    trigger.focus();
+    fireEvent.click(trigger);
+    expect(await screen.findByRole("dialog", { name: "Certificate of Death" })).toBeInTheDocument();
+    return trigger;
+  }
+
+  function stampFace() {
+    const dialog = screen.getByRole("dialog", { name: "Certificate of Death" });
+    const rotated = [...dialog.querySelectorAll<HTMLElement>("*")].find((el) => el.style.transform.includes("rotate(-15deg)"));
+    const face = rotated?.firstElementChild as HTMLElement | undefined;
+    if (!rotated || !face) throw new Error("REST IN PEACE stamp was not rendered");
+    return { rotated, face };
+  }
+
+  it("opens the certificate for a checked subscription, with its yearly amount", async () => {
+    await checkStreamingAndOpen();
+
+    const dialog = screen.getByRole("dialog", { name: "Certificate of Death" });
+    expect(dialog).toHaveTextContent("Streaming");
+    expect(dialog).toHaveTextContent("$180.00");
+    expect(dialog).toHaveTextContent("Reclaimed per year");
+    expect(dialog).toHaveTextContent("That's $15.00 back every month.");
+    expect(dialog).toHaveTextContent("Screenshot to flex your savings!");
+    expect(within(dialog).queryByRole("link", { name: /download/i })).not.toBeInTheDocument();
+  });
+
+  it("stamps REST IN PEACE in red, rotated about -15 degrees, with a thick red border", async () => {
+    await checkStreamingAndOpen();
+
+    const { rotated, face } = stampFace();
+    expect(face).toHaveTextContent(/REST IN\s*PEACE/);
+    expect(rotated).toHaveStyle({ transform: "translate(-50%, -50%) rotate(-15deg)" });
+    expect(face).toHaveStyle({
+      color: BLOOD,
+      border: `8px solid ${BLOOD}`,
+    });
+  });
+
+  it("closes on Escape, returns focus to the trigger, and restores background scrolling", async () => {
+    const trigger = await checkStreamingAndOpen();
+
+    expect(screen.getByRole("button", { name: "Close" })).toHaveFocus();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    expect(document.body.style.overflow).toBe("scroll");
+  });
+
+  it("closes from the Close button, returns focus to the trigger, and restores background scrolling", async () => {
+    const trigger = await checkStreamingAndOpen();
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    expect(document.body.style.overflow).toBe("scroll");
   });
 });

@@ -59,6 +59,23 @@ describe("financial page access", () => {
     expect(getUser).toHaveBeenCalledTimes(1);
   });
 
+  it("opens the receipt shell for Cypress only when SUBKILLER_E2E_AUTH is set outside production", async () => {
+    const originalEnv = process.env;
+    process.env = { ...process.env, SUBKILLER_E2E_AUTH: "1", NODE_ENV: "production" };
+    getUser.mockResolvedValue({ data: { user: null }, error: null });
+
+    try {
+      await expect(getSignedInUser()).resolves.toBeNull();
+      expect(getUser).toHaveBeenCalledTimes(1);
+
+      process.env = { ...process.env, NODE_ENV: "test" };
+      await expect(getSignedInUser()).resolves.toEqual({ id: "e2e-user" });
+      expect(getUser).toHaveBeenCalledTimes(1);
+    } finally {
+      process.env = originalEnv;
+    }
+  });
+
   it("admits a signed-in Supabase user to the receipt shell", async () => {
     setCookieJar([]);
     getUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });

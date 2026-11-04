@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Skull, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { NotAuthenticatedError, deleteSubscription, listSubscriptions } from "@/lib/subscriptions/repository";
+import {
+  NotAuthenticatedError,
+  deleteSubscription,
+  getYearlyBleed,
+  listSubscriptions,
+} from "@/lib/subscriptions/repository";
 import { sortByScore } from "@/lib/subscriptions/sort";
+import { yearlyCents } from "@/lib/subscriptions/yearly";
 import { fromStoredSubscription, money, toMonthly, type Subscription } from "./data";
 import { GraveyardList } from "./GraveyardList";
 import { useSubscriptions } from "./SubscriptionState";
@@ -134,6 +140,19 @@ type LoadState =
   | { status: "ready" }
   | { status: "error"; message: string; retryable: boolean };
 
+/** The SQL SUM baseline, in cents. `issuedAt` orders it against confirmed deletes. */
+type Baseline =
+  | { status: "loading" }
+  | { status: "ready"; cents: number; issuedAt: number }
+  | { status: "error" }
+  // The list already shows the sign-in message; the total shows nothing rather than a second alert.
+  | { status: "signed-out" };
+
+/** A delete Supabase confirmed: `at` orders it against baseline requests. */
+type Deletion = { at: number; cents: number };
+
+const sumCents = (subs: Subscription[]) => subs.reduce((n, s) => n + yearlyCents(s.cost, s.frequency), 0);
+
 /**
  * Stored rows replace the in-memory list. A row the user already toggled this
  * session keeps its cancel mark, unless its score changed since.
@@ -156,6 +175,39 @@ export function GraveyardView() {
   // Mirrors deletingIds synchronously, so rapid clicks never send a second delete.
   const pendingDeletes = useRef(new Set<string>());
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [baseline, setBaseline] = useState<Baseline>({ status: "loading" });
+  const [deletions, setDeletions] = useState<Deletion[]>([]);
+  // One counter orders baseline requests and confirmed deletes; only the newest request may land.
+  const events = useRef(0);
+  const latestBaseline = useRef(0);
+  const mounted = useRef(true);
+
+  const fetchBaseline = useCallback(() => {
+    const issuedAt = ++events.current;
+    latestBaseline.current = issuedAt;
+    getYearlyBleed(createClient()).then(
+      (total) => {
+        if (!mounted.current || issuedAt !== latestBaseline.current) return;
+        setBaseline({ status: "ready", cents: Math.round(total * 100), issuedAt });
+        // Deletes confirmed before this request was sent are already in the SQL figure.
+        setDeletions((list) => list.filter((d) => d.at > issuedAt));
+      },
+      (error: unknown) => {
+        if (!mounted.current || issuedAt !== latestBaseline.current) return;
+        if (error instanceof NotAuthenticatedError) setBaseline({ status: "signed-out" });
+        // A failed refresh keeps the last SQL figure; pending local deletes still apply to it.
+        else setBaseline((current) => (current.status === "ready" ? current : { status: "error" }));
+      },
+    );
+  }, []);
+
+  useEffect(() => {
+    mounted.current = true;
+    fetchBaseline();
+    return () => {
+      mounted.current = false;
+    };
+  }, [fetchBaseline]);
 
   useEffect(() => {
     // Set on unmount or a newer load, so a late response never overwrites newer state.
@@ -185,16 +237,33 @@ export function GraveyardView() {
   // Until the list has loaded, totals and bulk actions see nothing, so they never count rows that are not on screen.
   const ready = load.status === "ready";
   const visible = ready ? subscriptions : [];
-  const totalYearly = visible.reduce((sum, s) => sum + yearly(s), 0);
-  const savedYearly = visible.filter((s) => s.killed).reduce((sum, s) => sum + yearly(s), 0);
-  const stillBleeding = totalYearly - savedYearly;
-  const killedCount = visible.filter((s) => s.killed).length;
+  const killed = visible.filter((s) => s.killed);
+  const killedCount = killed.length;
   const sorted = sortByScore(visible);
+
+  // Baseline: the SQL SUM, minus deletes Supabase confirmed after that figure was requested.
+  // Savings: the checked rows, from client state. Waste: what is left. All in whole cents.
+  const savedCents = sumCents(killed);
+  const baselineCents =
+    baseline.status === "ready"
+      ? Math.max(
+          0,
+          baseline.cents - deletions.filter((d) => d.at > baseline.issuedAt).reduce((n, d) => n + d.cents, 0),
+        )
+      : null;
+  const wasteCents = baselineCents === null ? null : Math.max(0, baselineCents - savedCents);
+  const savedYearly = savedCents / 100;
+
+  const retryBaseline = () => {
+    setBaseline({ status: "loading" });
+    fetchBaseline();
+  };
 
   const retry = () => {
     setDeleteError(null);
     setLoad({ status: "loading" });
     setAttempt((n) => n + 1);
+    if (baseline.status === "error") retryBaseline();
   };
 
   const toggleKill = (id: string) => setSubscriptions((prev) => prev.map((s) => (s.id === id ? { ...s, killed: !s.killed } : s)));
@@ -202,13 +271,19 @@ export function GraveyardView() {
   // Delete is not cancel: it removes the row from Supabase and from the list, and never changes a `killed` flag.
   const deleteSub = async (id: string) => {
     if (pendingDeletes.current.has(id)) return;
-    const name = subscriptions.find((s) => s.id === id)?.name ?? "that subscription";
+    const sub = subscriptions.find((s) => s.id === id);
+    const name = sub?.name ?? "that subscription";
     pendingDeletes.current.add(id);
     setDeletingIds(new Set(pendingDeletes.current));
     setDeleteError(null);
     try {
       await deleteSubscription(createClient(), id);
       setSubscriptions((prev) => prev.filter((s) => s.id !== id));
+      // Totals change only after Supabase confirms: drop the row's amount locally now,
+      // then refetch the SQL SUM, which no longer counts it.
+      const at = ++events.current;
+      setDeletions((list) => [...list, { at, cents: sub ? yearlyCents(sub.cost, sub.frequency) : 0 }]);
+      if (mounted.current) fetchBaseline();
     } catch {
       setDeleteError(`Couldn't delete ${name}. Try again.`);
     } finally {
@@ -222,24 +297,48 @@ export function GraveyardView() {
   return (
     <div className="flex flex-col gap-6">
       <section className="border-4 border-black rounded-3xl p-6 neo-shadow" style={{ background: CHART }} aria-live="polite">
-        <p className="text-lg font-bold">TOTAL MONEY BLED:</p>
-        <p className="text-6xl font-bold leading-none tracking-tighter break-words">{money(savedYearly)}</p>
-        <p className="text-2xl font-bold">/Year</p>
+        <p className="text-lg font-bold" aria-hidden="true">
+          TOTAL MONEY BLED:
+        </p>
+        {baselineCents !== null ? (
+          <>
+            <p className="sr-only">TOTAL MONEY BLED: {money(baselineCents / 100)}/Year</p>
+            <p className="text-6xl font-bold leading-none tracking-tighter break-words" aria-hidden="true">
+              {money(baselineCents / 100)}
+            </p>
+            <p className="text-2xl font-bold" aria-hidden="true">
+              /Year
+            </p>
+          </>
+        ) : baseline.status === "loading" ? (
+          <p className="text-2xl font-bold">Adding up your yearly total…</p>
+        ) : baseline.status === "signed-out" ? (
+          <p className="text-6xl font-bold leading-none tracking-tighter">—</p>
+        ) : (
+          <div className="flex flex-col gap-3" role="alert">
+            <p className="text-xl font-bold">Couldn&apos;t add up your yearly total.</p>
+            <div className="pr-2 pb-2">
+              <NeoButton className="px-5 py-2" onClick={retryBaseline} aria-label="Retry the yearly total">
+                Try again
+              </NeoButton>
+            </div>
+          </div>
+        )}
 
         <div className="mt-5 border-t-4 border-black pt-3 flex flex-col gap-1">
           <div className="flex justify-between gap-4">
-            <span>Monthly</span>
-            <span className="font-bold">{money(savedYearly / 12)}</span>
+            <span>Monthly equivalent</span>
+            <span className="font-bold">{baselineCents === null ? "—" : `${money(baselineCents / 1200)}/Month`}</span>
           </div>
           <div className="flex justify-between gap-4">
-            <span>Still bleeding</span>
+            <span>Simulated savings</span>
+            <span className="font-bold">{baselineCents === null ? "—" : `${money(savedYearly)}/yr`}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span>Current waste</span>
             <span className="font-bold" style={{ color: BLOOD }}>
-              −{money(stillBleeding)}/yr
+              {wasteCents === null ? "—" : `${wasteCents > 0 ? "−" : ""}${money(wasteCents / 100)}/yr`}
             </span>
-          </div>
-          <div className="flex justify-between gap-4">
-            <span>Before the cull</span>
-            <span className="font-bold">{money(totalYearly)}/yr</span>
           </div>
         </div>
       </section>

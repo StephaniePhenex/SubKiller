@@ -21,23 +21,37 @@ const CLOUD = dbRow("a0000000-0000-4000-8000-000000000003", "Cloud", "120.00", "
 type Result = { data: unknown; error: { message: string } | null };
 type Op = [method: string, args: unknown[]];
 
+const FACTOR: Record<string, number> = { weekly: 52, monthly: 12, yearly: 1 };
+
 /**
- * Fake Supabase client: `rows` answers the list query, `bleed()` answers each
- * `rpc("yearly_bleed")` (it may return a pending promise), and deletes succeed
- * unless `failDelete` is set. Every query and RPC is recorded.
+ * Fake Supabase client backed by an in-memory table. The list query returns
+ * the remaining rows, a successful delete removes its row, and by default
+ * `rpc("yearly_bleed")` sums the remaining rows the way the SQL function does
+ * (as a numeric string). A test can pass its own `bleed()` to hold a response
+ * back or return something else. Every query and RPC is recorded.
  */
 function installClient({
-  rows = [STREAMING, GYM, CLOUD] as unknown[],
-  bleed = (): Result | Promise<Result> => ({ data: "820.00", error: null }),
+  rows = [STREAMING, GYM, CLOUD] as ReturnType<typeof dbRow>[],
+  bleed,
   failDelete = false,
+}: {
+  rows?: ReturnType<typeof dbRow>[];
+  bleed?: () => Result | Promise<Result>;
+  failDelete?: boolean;
 } = {}) {
+  let table = [...rows];
+  const sqlSum = (): Result => ({
+    data: (table.reduce((n, r) => n + Math.round(Number(r.cost) * 100) * FACTOR[r.frequency], 0) / 100).toFixed(2),
+    error: null,
+  });
+  const answerBleed = bleed ?? sqlSum;
   const chains: Op[][] = [];
   const rpc = jest.fn(async (fn: string) => {
     if (fn !== "yearly_bleed") throw new Error(`unexpected rpc ${fn}`);
-    return bleed();
+    return answerBleed();
   });
-  const from = jest.fn((table: string) => {
-    const ops: Op[] = [["from", [table]]];
+  const from = jest.fn((tableName: string) => {
+    const ops: Op[] = [["from", [tableName]]];
     chains.push(ops);
     const chain: Record<string, unknown> = {};
     for (const method of ["select", "insert", "update", "delete", "eq", "is", "order", "single", "maybeSingle"]) {
@@ -49,11 +63,13 @@ function installClient({
     chain.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => {
       const isDelete = ops.some(([m]) => m === "delete");
       const id = ops.find(([m, a]) => m === "eq" && a[0] === "id")?.[1][1];
-      const result = isDelete
-        ? failDelete
-          ? { data: null, error: { message: "permission denied" } }
-          : { data: [{ id }], error: null }
-        : { data: rows, error: null };
+      let result: Result;
+      if (!isDelete) result = { data: table, error: null };
+      else if (failDelete) result = { data: null, error: { message: "permission denied" } };
+      else {
+        table = table.filter((r) => r.id !== id);
+        result = { data: [{ id }], error: null };
+      }
       return Promise.resolve(result).then(resolve, reject);
     };
     return chain;
@@ -249,7 +265,7 @@ describe("deleting with the baseline and the simulator", () => {
   });
 
   it("an unchecked row lowers the baseline and leaves the savings alone", async () => {
-    installClient({ bleed: () => ({ data: "820.00", error: null }) });
+    installClient();
     renderGraveyard();
     await loaded();
     fireEvent.click(screen.getByRole("checkbox", { name: "Cancel Streaming" }));
@@ -260,6 +276,25 @@ describe("deleting with the baseline and the simulator", () => {
     expect(row("Simulated savings")).toContain("$180.00/yr");
     expect(row("Current waste")).toContain("$520.00/yr");
     expect(screen.getByRole("checkbox", { name: "Cancel Streaming" })).toBeChecked();
+  });
+
+  it("keeps the adjusted total when the refetch after a delete fails", async () => {
+    let call = 0;
+    installClient({
+      bleed: () => {
+        call += 1;
+        return call === 1 ? { data: "820.00", error: null } : { data: null, error: { message: "network down" } };
+      },
+    });
+    renderGraveyard();
+    await loaded();
+
+    await remove("Cloud");
+
+    await screen.findByText("TOTAL MONEY BLED: $700.00/Year");
+    await act(async () => {});
+    expect(screen.getByText("TOTAL MONEY BLED: $700.00/Year")).toBeInTheDocument();
+    expect(within(totalCard()).queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("a failed delete changes nothing", async () => {
@@ -277,7 +312,7 @@ describe("deleting with the baseline and the simulator", () => {
   });
 
   it("subtracts a row once, however many times its delete is clicked", async () => {
-    installClient({ bleed: () => ({ data: "820.00", error: null }) });
+    installClient();
     renderGraveyard();
     await loaded();
     const button = screen.getByRole("button", { name: "Delete Cloud from the list" });

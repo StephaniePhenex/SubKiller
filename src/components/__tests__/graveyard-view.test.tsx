@@ -209,7 +209,7 @@ describe("Graveyard list from Supabase", () => {
       </SubscriptionProvider>,
     );
     await screen.findByRole("checkbox", { name: "Cancel Unused Gym" });
-    expect(within(screen.getByText("TOTAL MONEY BLED:").closest("section")!).getByText("$588.00")).toBeInTheDocument();
+    expect(screen.getByText("TOTAL MONEY BLED:").closest("section")!.textContent).toContain("Simulated savings$588.00/yr");
 
     // Leave and come back while Supabase is down: the gym is still in shared state, but not on screen.
     fail = true;
@@ -222,7 +222,7 @@ describe("Graveyard list from Supabase", () => {
     await screen.findByRole("alert");
 
     const totalCard = screen.getByText("TOTAL MONEY BLED:").closest("section")!;
-    expect(within(totalCard).queryByText("$588.00")).not.toBeInTheDocument();
+    expect(totalCard.textContent).not.toContain("$588.00");
     expect(screen.getByRole("button", { name: "Kill all" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Spare all" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Generate my poster" })).toBeDisabled();
@@ -335,7 +335,7 @@ describe("Graveyard delete", () => {
     await screen.findByRole("checkbox", { name: "Cancel Netflix" });
     const totalCard = screen.getByText("TOTAL MONEY BLED:").closest("section")!;
     // Only the gym (score 12) starts marked: $49.00 x 12.
-    expect(within(totalCard).getByText("$588.00")).toBeInTheDocument();
+    expect(totalCard.textContent).toContain("Simulated savings$588.00/yr");
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Delete Netflix from the list" }));
@@ -344,7 +344,7 @@ describe("Graveyard delete", () => {
 
     expect(screen.getByRole("checkbox", { name: "Cancel Unused Gym" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Cancel Cloud Storage" })).not.toBeChecked();
-    expect(within(totalCard).getByText("$588.00")).toBeInTheDocument();
+    expect(totalCard.textContent).toContain("Simulated savings$588.00/yr");
   });
 
   it("keeps the card and shows an accessible error when the delete fails", async () => {

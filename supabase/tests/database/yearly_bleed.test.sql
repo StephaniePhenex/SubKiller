@@ -89,5 +89,6 @@ select ok(not has_function_privilege('anon', 'public.yearly_bleed()', 'execute')
 set local role anon;
 select throws_ok($$ select public.yearly_bleed() $$, '42501', null, 'a signed-out call is refused');
 
+reset role;
 select * from finish();
 rollback;

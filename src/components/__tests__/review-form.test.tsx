@@ -13,6 +13,30 @@ jest.mock("@/lib/supabase/client", () => ({
   createClient: jest.fn(),
 }));
 
+// The AI score is a server concern (Issue #9, covered in review-verdict.test.tsx). Stub it so
+// these tests keep checking only the form: validation, the insert payload, and navigation.
+jest.mock("@/app/(app)/review/actions", () => ({
+  previewVerdict: jest.fn(async () => ({
+    ok: true,
+    verdict: { aiScore: 20, verdict: "You rewatched one sitcom twice." },
+    isMock: true,
+  })),
+  scoreSubscription: jest.fn(async (id: string) => ({
+    ok: true,
+    subscription: {
+      id,
+      userId: "11111111-1111-4111-8111-111111111111",
+      name: "Netflix",
+      cost: 15.99,
+      frequency: "monthly",
+      feeling: "",
+      aiScore: 20,
+      verdict: "You rewatched one sitcom twice.",
+      createdAt: "2026-11-02T00:00:00+00:00",
+    },
+  })),
+}));
+
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const ROW_ID = "a0000000-0000-4000-8000-000000000001";
 

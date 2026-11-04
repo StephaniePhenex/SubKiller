@@ -56,6 +56,8 @@ function installClient(respond: (ops: Op[]) => Result | Promise<Result>, user: {
   });
   jest.mocked(createClient).mockReturnValue({
     from,
+    // The yearly SQL baseline (Issue #12) is covered in graveyard-totals.test.tsx.
+    rpc: jest.fn(async () => ({ data: 0, error: null })),
     auth: {
       getUser: jest.fn(async () => ({ data: { user }, error: user ? null : { message: "Auth session missing!" } })),
     },

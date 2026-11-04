@@ -1,0 +1,333 @@
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createClient } from "@/lib/supabase/client";
+import { SubscriptionProvider } from "@/components/receipt/SubscriptionState";
+import { GraveyardView } from "@/components/receipt/GraveyardView";
+
+jest.mock("@/lib/supabase/client", () => ({
+  createClient: jest.fn(),
+}));
+
+const USER_ID = "11111111-1111-4111-8111-111111111111";
+
+function dbRow(id: string, name: string, cost: string, frequency: string, aiScore: number) {
+  return { id, user_id: USER_ID, name, cost, frequency, feeling: "", ai_score: aiScore, verdict: "Stored.", created_at: "2026-11-04T12:00:00+00:00" };
+}
+
+// $15/month = $180/yr, $10/week = $520/yr, $120/year = $120/yr: $820/yr in all. None starts marked (all scores >= 30).
+const STREAMING = dbRow("a0000000-0000-4000-8000-000000000001", "Streaming", "15.00", "monthly", 50);
+const GYM = dbRow("a0000000-0000-4000-8000-000000000002", "Gym", "10.00", "weekly", 60);
+const CLOUD = dbRow("a0000000-0000-4000-8000-000000000003", "Cloud", "120.00", "yearly", 80);
+
+type Result = { data: unknown; error: { message: string } | null };
+type Op = [method: string, args: unknown[]];
+
+/**
+ * Fake Supabase client: `rows` answers the list query, `bleed()` answers each
+ * `rpc("yearly_bleed")` (it may return a pending promise), and deletes succeed
+ * unless `failDelete` is set. Every query and RPC is recorded.
+ */
+function installClient({
+  rows = [STREAMING, GYM, CLOUD] as unknown[],
+  bleed = (): Result | Promise<Result> => ({ data: "820.00", error: null }),
+  failDelete = false,
+} = {}) {
+  const chains: Op[][] = [];
+  const rpc = jest.fn(async (fn: string) => {
+    if (fn !== "yearly_bleed") throw new Error(`unexpected rpc ${fn}`);
+    return bleed();
+  });
+  const from = jest.fn((table: string) => {
+    const ops: Op[] = [["from", [table]]];
+    chains.push(ops);
+    const chain: Record<string, unknown> = {};
+    for (const method of ["select", "insert", "update", "delete", "eq", "is", "order", "single", "maybeSingle"]) {
+      chain[method] = (...args: unknown[]) => {
+        ops.push([method, args]);
+        return chain;
+      };
+    }
+    chain.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => {
+      const isDelete = ops.some(([m]) => m === "delete");
+      const id = ops.find(([m, a]) => m === "eq" && a[0] === "id")?.[1][1];
+      const result = isDelete
+        ? failDelete
+          ? { data: null, error: { message: "permission denied" } }
+          : { data: [{ id }], error: null }
+        : { data: rows, error: null };
+      return Promise.resolve(result).then(resolve, reject);
+    };
+    return chain;
+  });
+  jest.mocked(createClient).mockReturnValue({
+    from,
+    rpc,
+    auth: { getUser: jest.fn(async () => ({ data: { user: { id: USER_ID } }, error: null })) },
+  } as never);
+  return { rpc, from, writes: () => chains.filter((ops) => ops.some(([m]) => ["insert", "update", "delete"].includes(m))) };
+}
+
+function renderGraveyard() {
+  return render(
+    <SubscriptionProvider>
+      <GraveyardView />
+    </SubscriptionProvider>,
+  );
+}
+
+const totalCard = () => screen.getByText("TOTAL MONEY BLED:").closest("section")!;
+/** The text of one labelled row in the top card, e.g. "Simulated savings$180.00/yr". */
+const row = (label: string) => within(totalCard()).getByText(label).parentElement!.textContent;
+
+async function loaded() {
+  await screen.findByRole("checkbox", { name: "Cancel Streaming" });
+  await screen.findByText("TOTAL MONEY BLED: $820.00/Year");
+}
+
+async function remove(name: string) {
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: `Delete ${name} from the list` }));
+  });
+}
+
+describe("TOTAL MONEY BLED baseline (SQL SUM)", () => {
+  beforeEach(() => jest.mocked(createClient).mockReset());
+
+  it("shows a loading state, not a fabricated $0, until the aggregate returns", async () => {
+    let release!: (r: Result) => void;
+    installClient({ bleed: () => new Promise<Result>((resolve) => (release = resolve)) });
+    renderGraveyard();
+    await screen.findByRole("checkbox", { name: "Cancel Streaming" });
+
+    expect(within(totalCard()).getByText(/adding up/i)).toBeInTheDocument();
+    expect(within(totalCard()).queryByText(/\$0\.00/)).not.toBeInTheDocument();
+
+    await act(async () => release({ data: "820.00", error: null }));
+
+    expect(within(totalCard()).getByText("$820.00")).toBeInTheDocument();
+    expect(within(totalCard()).queryByText(/adding up/i)).not.toBeInTheDocument();
+  });
+
+  it("is the dominant figure, read out as 'TOTAL MONEY BLED: $XXX/Year', with the monthly equivalent", async () => {
+    installClient();
+    renderGraveyard();
+    await loaded();
+
+    expect(screen.getByText("TOTAL MONEY BLED: $820.00/Year")).toBeInTheDocument();
+    expect(within(totalCard()).getByText("$820.00")).toHaveClass("text-6xl");
+    expect(row("Monthly equivalent")).toContain("$68.33/Month");
+  });
+
+  it("comes from the database aggregate, not from adding up the cards in the browser", async () => {
+    // The cards add up to $820, but the SQL SUM says $1,000: the SQL figure is shown.
+    const { rpc } = installClient({ bleed: () => ({ data: "1000.00", error: null }) });
+    renderGraveyard();
+    await screen.findByText("TOTAL MONEY BLED: $1,000.00/Year");
+
+    expect(rpc).toHaveBeenCalledWith("yearly_bleed");
+    expect(within(totalCard()).getByText("$1,000.00")).toBeInTheDocument();
+    expect(row("Current waste")).toContain("$1,000.00/yr");
+  });
+
+  it("shows $0.00 for an empty account once loaded, with the confess link", async () => {
+    installClient({ rows: [], bleed: () => ({ data: 0, error: null }) });
+    renderGraveyard();
+
+    expect(await screen.findByText("TOTAL MONEY BLED: $0.00/Year")).toBeInTheDocument();
+    expect(row("Simulated savings")).toContain("$0.00/yr");
+    expect(row("Current waste")).toContain("$0.00/yr");
+    expect(screen.getByRole("link", { name: "Confess a subscription" })).toHaveAttribute("href", "/confess");
+  });
+
+  it.each([
+    ["a database error", () => ({ data: null, error: { message: "function missing" } })],
+    ["an invalid total", () => ({ data: "a lot", error: null })],
+  ])("shows an accessible error, never NaN or $0, for %s, and retries", async (_label, bad) => {
+    let fail = true;
+    installClient({ bleed: () => (fail ? bad() : { data: "820.00", error: null }) });
+    renderGraveyard();
+
+    expect(await within(totalCard()).findByRole("alert")).toHaveTextContent("Couldn't add up your yearly total.");
+    expect(document.body.textContent).not.toMatch(/NaN/);
+    expect(within(totalCard()).queryByText(/\$0\.00/)).not.toBeInTheDocument();
+    // The list itself still works.
+    expect(screen.getByRole("checkbox", { name: "Cancel Streaming" })).toBeInTheDocument();
+
+    fail = false;
+    fireEvent.click(within(totalCard()).getByRole("button", { name: "Retry the yearly total" }));
+
+    expect(await screen.findByText("TOTAL MONEY BLED: $820.00/Year")).toBeInTheDocument();
+  });
+});
+
+describe("simulated savings vs current waste (client delta)", () => {
+  beforeEach(() => jest.mocked(createClient).mockReset());
+
+  it("updates in the same render as each check and uncheck, with no database call", async () => {
+    const { rpc, from } = installClient();
+    renderGraveyard();
+    await loaded();
+    const rpcCalls = rpc.mock.calls.length;
+    const queries = from.mock.calls.length;
+
+    expect(row("Simulated savings")).toContain("$0.00/yr");
+    expect(row("Current waste")).toContain("$820.00/yr");
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Cancel Streaming" }));
+    expect(row("Simulated savings")).toContain("$180.00/yr");
+    expect(row("Current waste")).toContain("$640.00/yr");
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Cancel Gym" }));
+    expect(row("Simulated savings")).toContain("$700.00/yr");
+    expect(row("Current waste")).toContain("$120.00/yr");
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Cancel Streaming" }));
+    expect(row("Simulated savings")).toContain("$520.00/yr");
+    expect(row("Current waste")).toContain("$300.00/yr");
+
+    // The baseline and its monthly equivalent do not move with the simulator.
+    expect(screen.getByText("TOTAL MONEY BLED: $820.00/Year")).toBeInTheDocument();
+    expect(row("Monthly equivalent")).toContain("$68.33/Month");
+    expect(rpc.mock.calls.length).toBe(rpcCalls);
+    expect(from.mock.calls.length).toBe(queries);
+  });
+
+  it("never shows negative waste: killing everything leaves $0.00", async () => {
+    installClient();
+    renderGraveyard();
+    await loaded();
+
+    fireEvent.click(screen.getByRole("button", { name: "Kill all" }));
+
+    expect(row("Simulated savings")).toContain("$820.00/yr");
+    expect(row("Current waste")).toContain("$0.00/yr");
+    expect(row("Current waste")).not.toMatch(/[−-]\$/);
+  });
+
+  it("clamps waste at $0.00 if the baseline is ever below the simulated savings", async () => {
+    installClient({ bleed: () => ({ data: "100.00", error: null }) });
+    renderGraveyard();
+    await screen.findByText("TOTAL MONEY BLED: $100.00/Year");
+
+    fireEvent.click(screen.getByRole("button", { name: "Kill all" }));
+
+    expect(row("Current waste")).toContain("$0.00/yr");
+    expect(document.body.textContent).not.toMatch(/NaN|−\$0\.00|-\$/);
+  });
+});
+
+describe("deleting with the baseline and the simulator", () => {
+  beforeEach(() => jest.mocked(createClient).mockReset());
+
+  it("a checked row leaves both the baseline and the savings at once; the refetched SQL total agrees", async () => {
+    let call = 0;
+    let releaseRefetch!: (r: Result) => void;
+    const { rpc } = installClient({
+      bleed: () => {
+        call += 1;
+        if (call === 1) return { data: "820.00", error: null };
+        return new Promise<Result>((resolve) => (releaseRefetch = resolve));
+      },
+    });
+    renderGraveyard();
+    await loaded();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Cancel Gym" }));
+    expect(row("Simulated savings")).toContain("$520.00/yr");
+
+    await remove("Gym");
+
+    // Before the refetch returns, the local baseline already drops by the gym's $520.
+    await screen.findByText("TOTAL MONEY BLED: $300.00/Year");
+    expect(row("Simulated savings")).toContain("$0.00/yr");
+    expect(row("Current waste")).toContain("$300.00/yr");
+    expect(row("Monthly equivalent")).toContain("$25.00/Month");
+    expect(rpc).toHaveBeenCalledTimes(2);
+
+    // The refreshed SQL SUM no longer counts the gym, and nothing is subtracted twice.
+    await act(async () => releaseRefetch({ data: "300.00", error: null }));
+    expect(screen.getByText("TOTAL MONEY BLED: $300.00/Year")).toBeInTheDocument();
+    expect(row("Current waste")).toContain("$300.00/yr");
+  });
+
+  it("an unchecked row lowers the baseline and leaves the savings alone", async () => {
+    installClient({ bleed: () => ({ data: "820.00", error: null }) });
+    renderGraveyard();
+    await loaded();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Cancel Streaming" }));
+
+    await remove("Cloud");
+
+    await screen.findByText("TOTAL MONEY BLED: $700.00/Year");
+    expect(row("Simulated savings")).toContain("$180.00/yr");
+    expect(row("Current waste")).toContain("$520.00/yr");
+    expect(screen.getByRole("checkbox", { name: "Cancel Streaming" })).toBeChecked();
+  });
+
+  it("a failed delete changes nothing", async () => {
+    installClient({ failDelete: true });
+    renderGraveyard();
+    await loaded();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Cancel Gym" }));
+
+    await remove("Gym");
+
+    expect(await screen.findByText("Couldn't delete Gym. Try again.")).toBeInTheDocument();
+    expect(screen.getByText("TOTAL MONEY BLED: $820.00/Year")).toBeInTheDocument();
+    expect(row("Simulated savings")).toContain("$520.00/yr");
+    expect(row("Current waste")).toContain("$300.00/yr");
+  });
+
+  it("subtracts a row once, however many times its delete is clicked", async () => {
+    installClient({ bleed: () => ({ data: "820.00", error: null }) });
+    renderGraveyard();
+    await loaded();
+    const button = screen.getByRole("button", { name: "Delete Cloud from the list" });
+
+    await act(async () => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+
+    await screen.findByText("TOTAL MONEY BLED: $700.00/Year");
+  });
+
+  it("ignores a stale refetch that returns after a newer one", async () => {
+    const pending: Array<(r: Result) => void> = [];
+    let call = 0;
+    installClient({
+      bleed: () => {
+        call += 1;
+        if (call === 1) return { data: "820.00", error: null };
+        return new Promise<Result>((resolve) => pending.push(resolve));
+      },
+    });
+    renderGraveyard();
+    await loaded();
+
+    await remove("Cloud");
+    await screen.findByText("TOTAL MONEY BLED: $700.00/Year");
+    await remove("Gym");
+    await screen.findByText("TOTAL MONEY BLED: $180.00/Year");
+    await waitFor(() => expect(pending).toHaveLength(2));
+
+    // The newer refetch (after both deletes) answers first; the older one arrives late with $700.
+    await act(async () => pending[1]({ data: "180.00", error: null }));
+    await act(async () => pending[0]({ data: "700.00", error: null }));
+
+    expect(screen.getByText("TOTAL MONEY BLED: $180.00/Year")).toBeInTheDocument();
+  });
+
+  it("does not write to Supabase except for the delete itself", async () => {
+    const { writes } = installClient();
+    renderGraveyard();
+    await loaded();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Cancel Gym" }));
+    fireEvent.click(screen.getByRole("button", { name: "Spare all" }));
+
+    await remove("Gym");
+    await screen.findByText("TOTAL MONEY BLED: $300.00/Year");
+
+    expect(writes()).toHaveLength(1);
+    expect(writes()[0].some(([m]) => m === "delete")).toBe(true);
+  });
+});

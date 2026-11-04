@@ -21,6 +21,27 @@ const MOCK_EXTRACTED_FIELDS = {
   feeling: "Kind of guilty. I keep it in case a good show comes out.",
 };
 
+export type ConfessionFields = {
+  name: string;
+  cost: string;
+  frequency: Frequency;
+  feeling: string;
+};
+
+function isFrequency(value: string | undefined): value is Frequency {
+  return value === "weekly" || value === "monthly" || value === "yearly";
+}
+
+/** Uses a passed confession when one exists. Missing pieces stay on the sample. */
+function confessionFields(initial?: Partial<ConfessionFields>): ConfessionFields {
+  return {
+    name: initial?.name ?? MOCK_EXTRACTED_FIELDS.name,
+    cost: initial?.cost ?? MOCK_EXTRACTED_FIELDS.cost,
+    frequency: isFrequency(initial?.frequency) ? initial.frequency : MOCK_EXTRACTED_FIELDS.frequency,
+    feeling: initial?.feeling ?? MOCK_EXTRACTED_FIELDS.feeling,
+  };
+}
+
 const FREQUENCIES: { id: Frequency; label: string }[] = [
   { id: "weekly", label: "Weekly" },
   { id: "monthly", label: "Monthly" },
@@ -51,10 +72,10 @@ function Field({ id, label, error, children }: { id: string; label: string; erro
   );
 }
 
-export function ReviewView() {
+export function ReviewView({ initialFields }: { initialFields?: Partial<ConfessionFields> }) {
   const router = useRouter();
   const { setSubscriptions } = useSubscriptions();
-  const [draft, setDraft] = useState(MOCK_EXTRACTED_FIELDS);
+  const [draft, setDraft] = useState(() => confessionFields(initialFields));
   const [preview, setPreview] = useState<Preview>({ status: "loading" });
   const previewRequest = useRef(0);
   // Set once the row is filed, so a retry after a scoring failure never files a second row.

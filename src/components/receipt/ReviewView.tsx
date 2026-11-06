@@ -173,13 +173,13 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
       <p className="mb-6">Here&apos;s what we heard. Fix anything that&apos;s wrong, then file it.</p>
 
       <div className="border-4 border-black rounded-2xl p-4 mb-6" style={{ background: PAPER }}>
-        <div className="flex justify-between gap-4 font-bold text-lg">
-          <span className="truncate">{draft.name || "Unnamed"}</span>
-          <span>${parseFloat(draft.cost) > 0 ? parseFloat(draft.cost).toFixed(2) : "0.00"}</span>
+        <div className="flex flex-col gap-1 font-bold text-lg sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+          <span className="min-w-0 break-words">{draft.name || "Unnamed"}</span>
+          <span className="shrink-0">${parseFloat(draft.cost) > 0 ? parseFloat(draft.cost).toFixed(2) : "0.00"}</span>
         </div>
-        <div className="mt-1 flex justify-between gap-4 text-sm">
+        <div className="mt-1 flex flex-col gap-1 text-sm sm:flex-row sm:justify-between sm:gap-4">
           <span>Billed {draft.frequency}</span>
-          <span>≈ ${(toMonthly(parseFloat(draft.cost) || 0, draft.frequency) * 12).toFixed(2)} / year</span>
+          <span className="break-words">≈ ${(toMonthly(parseFloat(draft.cost) || 0, draft.frequency) * 12).toFixed(2)} / year</span>
         </div>
       </div>
 
@@ -219,7 +219,7 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
           <span id="sub-freq-label" className="font-bold">
             Billed
           </span>
-          <div className="grid grid-cols-3 gap-3 pr-2 pb-2" role="group" aria-labelledby="sub-freq-label">
+          <div className="grid min-w-0 grid-cols-1 gap-3 pr-2 pb-2 sm:grid-cols-3" role="group" aria-labelledby="sub-freq-label">
             {FREQUENCIES.map((f) => {
               const on = draft.frequency === f.id;
               return (
@@ -228,7 +228,7 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
                   onClick={() => update("frequency", f.id)}
                   aria-pressed={on}
                   aria-label={f.label}
-                  className="py-2 px-2"
+                  className="min-h-11 w-full min-w-0 py-2 px-2"
                   style={{
                     background: on ? CHART : WHITE,
                     color: INK,
@@ -259,14 +259,14 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
       <Rule />
 
       <section aria-labelledby="ai-verdict-heading" className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 id="ai-verdict-heading" className="text-xl font-bold leading-tight">
             The AI&apos;s verdict
           </h3>
           {preview.status === "ready" && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <ScoreBadge score={preview.verdict.aiScore} />
-              <span className="text-lg font-bold leading-none whitespace-nowrap">
+              <span className="text-lg font-bold leading-none">
                 {scoreBand(preview.verdict.aiScore).label}
               </span>
             </div>
@@ -298,7 +298,7 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
           onClick={submitToGraveyard}
           disabled={saving}
           aria-label="Submit to Graveyard"
-          className="w-full flex items-center justify-center gap-3 py-5 text-2xl"
+          className="flex min-h-11 w-full flex-wrap items-center justify-center gap-3 py-5 text-center text-xl sm:text-2xl"
           style={{ background: INK, color: WHITE, opacity: saving ? 0.5 : 1 }}
         >
           <Skull size={28} strokeWidth={2.5} aria-hidden="true" />

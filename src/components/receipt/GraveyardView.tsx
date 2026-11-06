@@ -53,16 +53,16 @@ function PosterModal({ killed, savedYearly, onClose }: { killed: Subscription[];
     >
       <div className="max-w-md mx-auto flex flex-col items-center gap-5">
         <div className="w-full flex justify-end pr-2 pb-2">
-          <NeoButton ref={closeRef} onClick={onClose} aria-label="Close" className="flex items-center gap-2 px-5 py-2">
+          <NeoButton ref={closeRef} onClick={onClose} aria-label="Close" className="flex min-h-11 items-center gap-2 px-5 py-2">
             <X size={20} strokeWidth={3} aria-hidden="true" />
             <span>Close</span>
           </NeoButton>
         </div>
 
-        <article className="relative w-full border-4 border-black rounded-3xl p-6 neo-shadow-lg overflow-hidden" style={{ background: "#FFFFFF" }}>
+        <article className="relative w-full min-w-0 overflow-hidden border-4 border-black rounded-3xl p-4 neo-shadow-lg sm:p-6" style={{ background: "#FFFFFF" }}>
           <header className="text-center">
-            <p className="text-sm">Office of the Subscription Coroner</p>
-            <h3 id="poster-title" className="text-3xl font-bold leading-tight mt-1">
+            <p className="text-sm break-words">Office of the Subscription Coroner</p>
+            <h3 id="poster-title" className="mt-1 break-words text-2xl font-bold leading-tight sm:text-3xl">
               Certificate of Death
             </h3>
             <p className="text-sm mt-1">Filed {today}</p>
@@ -71,13 +71,13 @@ function PosterModal({ killed, savedYearly, onClose }: { killed: Subscription[];
           <Rule />
 
           <dl className="flex flex-col gap-2 text-sm">
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-4">
               <dt>Deceased</dt>
               <dd className="font-bold">
                 {killed.length} subscription{killed.length === 1 ? "" : "s"}
               </dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-4">
               <dt>Cause of death</dt>
               <dd className="font-bold">Chronic neglect</dd>
             </div>
@@ -87,16 +87,16 @@ function PosterModal({ killed, savedYearly, onClose }: { killed: Subscription[];
 
           <ul className="flex flex-col gap-2">
             {killed.map((s) => (
-              <li key={s.id} className="flex justify-between gap-4">
-                <span className="truncate">{s.name}</span>
-                <span className="font-bold shrink-0">{money(yearly(s))}</span>
+              <li key={s.id} className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-4">
+                <span className="min-w-0 break-words">{s.name}</span>
+                <span className="shrink-0 font-bold">{money(yearly(s))}</span>
               </li>
             ))}
           </ul>
 
           <div className="mt-4 border-t-4 border-black pt-4">
             <p className="text-sm font-bold">Reclaimed per year</p>
-            <p className="text-5xl font-bold leading-none tracking-tighter break-words">{money(savedYearly)}</p>
+            <p className="break-words text-4xl font-bold leading-none tracking-tighter sm:text-5xl">{money(savedYearly)}</p>
             <p className="mt-1 text-sm">That&apos;s {money(savedYearly / 12)} back every month.</p>
           </div>
 
@@ -106,14 +106,14 @@ function PosterModal({ killed, savedYearly, onClose }: { killed: Subscription[];
 
           <div className="absolute pointer-events-none select-none" style={{ top: "38%", left: "50%", transform: "translate(-50%, -50%) rotate(-15deg)" }} aria-hidden="true">
             <div
-              className="px-4 py-2 text-center font-bold leading-none whitespace-nowrap"
+              className="max-w-full px-3 py-2 text-center font-bold leading-none sm:px-4"
               style={{
                 border: `8px solid ${BLOOD}`,
                 outline: `3px solid ${BLOOD}`,
                 outlineOffset: 4,
                 borderRadius: "1rem",
                 color: BLOOD,
-                fontSize: "3.25rem",
+                fontSize: "clamp(1.75rem, 10vw, 3.25rem)",
                 letterSpacing: "-0.04em",
                 opacity: 0.88,
                 mixBlendMode: "multiply",
@@ -126,7 +126,7 @@ function PosterModal({ killed, savedYearly, onClose }: { killed: Subscription[];
           </div>
         </article>
 
-        <p className="flex items-center gap-2 text-xl font-bold text-center">
+        <p className="flex flex-wrap items-center justify-center gap-2 text-center text-lg font-bold sm:text-xl">
           <Camera size={24} strokeWidth={2.5} aria-hidden="true" />
           Screenshot to flex your savings!
         </p>
@@ -296,14 +296,14 @@ export function GraveyardView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="border-4 border-black rounded-3xl p-6 neo-shadow" style={{ background: CHART }} aria-live="polite">
+      <section className="min-w-0 border-4 border-black rounded-3xl p-4 neo-shadow sm:p-6" style={{ background: CHART }} aria-live="polite">
         <p className="text-lg font-bold" aria-hidden="true">
           TOTAL MONEY BLED:
         </p>
         {baselineCents !== null ? (
           <>
             <p className="sr-only">TOTAL MONEY BLED: {money(baselineCents / 100)}/Year</p>
-            <p className="text-6xl font-bold leading-none tracking-tighter break-words" aria-hidden="true">
+            <p className="max-w-full break-words text-4xl font-bold leading-none tracking-tighter sm:text-6xl" aria-hidden="true">
               {money(baselineCents / 100)}
             </p>
             <p className="text-2xl font-bold" aria-hidden="true">
@@ -313,12 +313,12 @@ export function GraveyardView() {
         ) : baseline.status === "loading" ? (
           <p className="text-2xl font-bold">Adding up your yearly total…</p>
         ) : baseline.status === "signed-out" ? (
-          <p className="text-6xl font-bold leading-none tracking-tighter">—</p>
+          <p className="text-4xl font-bold leading-none tracking-tighter sm:text-6xl">—</p>
         ) : (
           <div className="flex flex-col gap-3" role="alert">
             <p className="text-xl font-bold">Couldn&apos;t add up your yearly total.</p>
             <div className="pr-2 pb-2">
-              <NeoButton className="px-5 py-2" onClick={retryBaseline} aria-label="Retry the yearly total">
+              <NeoButton className="min-h-11 px-5 py-2" onClick={retryBaseline} aria-label="Retry the yearly total">
                 Try again
               </NeoButton>
             </div>
@@ -326,17 +326,17 @@ export function GraveyardView() {
         )}
 
         <div className="mt-5 border-t-4 border-black pt-3 flex flex-col gap-1">
-          <div className="flex justify-between gap-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-4">
             <span>Monthly equivalent</span>
-            <span className="font-bold">{baselineCents === null ? "—" : `${money(baselineCents / 1200)}/Month`}</span>
+            <span className="font-bold break-words">{baselineCents === null ? "—" : `${money(baselineCents / 1200)}/Month`}</span>
           </div>
-          <div className="flex justify-between gap-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-4">
             <span>Simulated savings</span>
-            <span className="font-bold">{baselineCents === null ? "—" : `${money(savedYearly)}/yr`}</span>
+            <span className="font-bold break-words">{baselineCents === null ? "—" : `${money(savedYearly)}/yr`}</span>
           </div>
-          <div className="flex justify-between gap-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-4">
             <span>Current waste</span>
-            <span className="font-bold" style={{ color: BLOOD }}>
+            <span className="break-words font-bold" style={{ color: BLOOD }}>
               {wasteCents === null ? "—" : `${wasteCents > 0 ? "−" : ""}${money(wasteCents / 100)}/yr`}
             </span>
           </div>
@@ -346,11 +346,11 @@ export function GraveyardView() {
       <div>
         <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
           <h2 className="text-2xl font-bold">The graveyard</h2>
-          <div className="flex gap-3 pr-2 pb-2">
-            <NeoButton className="px-4 py-1 text-sm" onClick={() => setAll(true)} disabled={!ready} aria-label="Kill all">
+          <div className="flex flex-wrap gap-3 pr-2 pb-2">
+            <NeoButton className="min-h-11 px-4 py-2 text-sm" onClick={() => setAll(true)} disabled={!ready} aria-label="Kill all">
               Kill all
             </NeoButton>
-            <NeoButton className="px-4 py-1 text-sm" onClick={() => setAll(false)} disabled={!ready} aria-label="Spare all">
+            <NeoButton className="min-h-11 px-4 py-2 text-sm" onClick={() => setAll(false)} disabled={!ready} aria-label="Spare all">
               Spare all
             </NeoButton>
           </div>
@@ -373,7 +373,7 @@ export function GraveyardView() {
             <p className="font-bold">{load.message}</p>
             {load.retryable && (
               <div className="pr-2 pb-2">
-                <NeoButton className="px-5 py-2" onClick={retry} aria-label="Try again">
+                <NeoButton className="min-h-11 px-5 py-2" onClick={retry} aria-label="Try again">
                   Try again
                 </NeoButton>
               </div>
@@ -390,7 +390,7 @@ export function GraveyardView() {
           onClick={() => setPosterOpen(true)}
           disabled={killedCount === 0}
           aria-label="Generate my poster"
-          className="w-full flex items-center justify-center gap-3 py-5 text-2xl"
+          className="flex min-h-11 w-full flex-wrap items-center justify-center gap-3 px-4 py-5 text-center text-xl sm:text-2xl"
           style={{ background: INK, color: WHITE, opacity: killedCount === 0 ? 0.5 : 1 }}
         >
           <Skull size={28} strokeWidth={2.5} aria-hidden="true" />

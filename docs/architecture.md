@@ -12,7 +12,7 @@ SubKiller (The Honest Sub) is a client-heavy web application that tracks, evalua
   - **Score color:** Harsh Red (`#FF0000`) for scores under 30, Chartreuse (`#E2FB72`) for 30–69, and Mint (`#8CEDB0`) for 70 and above.
   - **Font weight:** Space Mono is strictly 400 and 700. The poster stamp is weight 700 (`font-bold`).
 - **Backend & Database:** Supabase (PostgreSQL and Auth).
-- **Authentication:** Supabase Auth, using the Google OAuth provider so each session is a Supabase JWT. The receipt shell treats a request as signed in when a `subkiller-session` cookie or an `sb-*-auth-token` cookie is present. The local cookie is the stand-in until Google OAuth is connected.
+- **Authentication:** Supabase Auth with the Google OAuth provider. Each session is a Supabase JWT. The signed-in layout calls `getUser()`, which checks that token. A cookie name alone does not open the receipt shell. `src/proxy.ts` refreshes the session on later requests and writes the new cookies, because a Server Component cannot.
 - **Testing Infrastructure:** Strict red-green-refactor. A failing test is written and committed before implementation code. Jest and React Testing Library cover unit and component behavior. Cypress or Playwright covers end-to-end flows.
 
 ## 3. High-Level Architecture Flow
@@ -30,12 +30,13 @@ SubKiller (The Honest Sub) is a client-heavy web application that tracks, evalua
 4. **Persistence Layer (PostgreSQL):**
    - Stores user profiles and subscription ledgers.
    - **Security:** Row Level Security (RLS) is enforced per `user_id`. A query cannot run without that user context.
-   - The Confess control handles microphone permission, then runs Ready → Recording (simulated delay) → Processing (simulated delay) with `setTimeout`, and opens the editable review form. A recording is transcribed and discarded immediately. Audio files are never saved to the database.
+   - The Confess control asks for microphone permission, then runs Ready → Recording → Processing with `setTimeout`, and opens Review. The audio tracks are stopped and discarded. Nothing is transcribed, and no audio is stored. Review shows the Netflix sample unless the URL already carries `name`, `cost`, `frequency`, and `feeling`.
 
 ## 4. Key Architectural Decisions
 - **Zero UI Component Libraries:** Material UI and Ant Design are rejected. Components are bespoke DOM elements styled with Tailwind, following `DESIGN.md`.
 - **Automated Token Injection:** Tailwind color, type, radius, and spacing tokens are generated from `DESIGN.md`. The receipt's hard shadows are the 4px, 6px, and 10px offsets in that file. They are not soft Tailwind shadows.
-- **Client-side simulator:** Checking, unchecking, or deleting a graveyard row updates local React state and the savings total immediately.
+- **Client-side simulator:** Checking or unchecking a graveyard row updates React state and the savings total immediately, with no database call. Deleting a row waits until Supabase confirms, then drops it from the list.
+- **Deterministic score:** `getVerdictProvider()` returns a rules engine, not an external model. It starts at 60, subtracts up to 40 for the yearly cost, and moves up to 30 points for the feeling. The Review page labels that result as demo scoring. The stored score is still written once by the server.
 - **CSS-only poster:** GENERATE MY POSTER opens a full-screen CSS death certificate. The user screenshots it. `html2canvas` is not used.
-- **Voice input state machine:** The mic flow asks for microphone permission, then uses `setTimeout` for Ready → Recording → Processing before opening Review. The recording is transcribed and discarded immediately. Audio files are never written to the database.
+- **Voice input state machine:** The mic flow asks for microphone permission, then uses `setTimeout` for Ready → Recording → Processing before opening Review. The audio tracks are stopped and discarded. There is no transcript, and no audio is written to the database.
 - **CI/CD:** Vercel provides automated deployments and Deploy Previews. GitHub Actions runs testing and security scanning on every pull request.

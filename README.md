@@ -1,6 +1,6 @@
 # SubKiller (The Honest Sub)
 
-SubKiller is an AI-driven, Neo-Brutalist web application designed to track, evaluate, and ruthlessly eliminate vampire subscriptions. 
+SubKiller is a Neo-Brutalist web application that tracks subscriptions and scores each one with a deterministic rules engine. 
 
 ## Tech Stack
 
@@ -32,12 +32,12 @@ SubKiller is an AI-driven, Neo-Brutalist web application designed to track, eval
 - Server-only secrets (for example a Supabase service-role key or an AI provider key) must not use the `NEXT_PUBLIC_` prefix. Store them only in Vercel environment variables, and in GitHub Actions secrets only if a CI step needs them.
 - `NEXT_PUBLIC_` values are inlined at build time, so a changed value in Vercel only takes effect after a redeploy.
 - Use the publishable key, not the legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` name; the app does not read the old name. Find the key in the Supabase dashboard under Project Settings → API Keys.
-- The Supabase clients in `src/lib/supabase` read both variables when they are created, and no page creates one yet, so CI and the Vercel build need no values today. Add both variables to Vercel (Preview and Production) before sign-in (Issue #5) merges.
+- The browser client, the server client, and `src/proxy.ts` read the public URL and publishable key when a request needs Supabase. `GET /api/health` does not. Jest mocks the client, and `npm run test:e2e` signs the Cypress server in with `SUBKILLER_E2E_AUTH=1`, so those jobs need no Supabase secrets. Preview and Production need all three variables, or Google sign-in and scoring fail.
 
 ## CI/CD
 
-- **GitHub Actions:** `.github/workflows/ci.yml` runs the `build-and-test` job on every pull request to `main` and every push to `main`: `npm ci`, `npm audit --audit-level=high`, `npm run lint`, the `DESIGN.md` lint, `npm test`, then `npm run build`. Any failing step fails the check. The workflow token is read-only (`contents: read`).
-- **Database tests:** the `db-test` job starts a local Supabase stack, which applies `supabase/migrations`, and runs the pgTAP tests with `npm run test:db`. It is not a required check unless an admin adds it to the ruleset.
+- **GitHub Actions:** `.github/workflows/ci.yml` runs on every pull request to `main` and every push to `main`. `build-and-test` runs `npm ci`, `npm audit --audit-level=high`, `npm run lint`, the `DESIGN.md` lint, `npm test`, then `npm run build`. The `e2e` job runs `npm run test:e2e`. Any failing step fails that job. The workflow token is read-only (`contents: read`).
+- **Database tests:** the `db-test` job starts a local Supabase stack, which applies `supabase/migrations`, and runs the pgTAP tests with `npm run test:db`. `db-test` and `e2e` are not required checks unless an admin adds them to the ruleset.
 - **Security scan:** `npm audit --audit-level=high` fails the check on any high or critical advisory. Do not run `npm audit fix --force` to clear lower findings: it can install breaking major versions (for example an old Jest).
 - **Vercel:** the project is connected through Vercel's GitHub integration.
   - Every pull request gets a Preview deployment. The Vercel bot comments the Preview URL on the PR, and the `Vercel` status links to the build.
@@ -65,3 +65,9 @@ SubKiller is an AI-driven, Neo-Brutalist web application designed to track, eval
 - Read `docs/architecture.md` for system architecture.
 
 - Read `DESIGN.md` for our strict Neo-Brutalist UI constraints.
+
+- Read `docs/api/openapi.yaml` for `GET /api/health` and the Review server actions.
+
+## Scoring
+
+The importance score is a deterministic rules engine, not a call to an external model. `src/lib/ai/provider.ts` starts at 60, subtracts up to 40 for the yearly cost, and moves the score by up to 30 for phrases in the feeling. The Review page says so: "Demo scoring: built-in rules, not an AI model." The browser never sends a score. `scoreSubscription` reads the stored row and writes `ai_score` and `verdict` once with the server secret key. Swapping in a model means replacing `getVerdictProvider()`; `parseVerdictResponse` still checks the `{ score, verdict }` JSON.

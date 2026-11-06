@@ -66,6 +66,17 @@ describe("session-driven gate", () => {
     } as never);
   });
 
+  it("keeps the Cypress shell open without creating a Supabase client", () => {
+    render(
+      <AuthGate initialSession={{ user: { id: "e2e-user" } }} holdE2ESession>
+        <p>Confess ledger</p>
+      </AuthGate>,
+    );
+
+    expect(createClient).not.toHaveBeenCalled();
+    expect(screen.getByText("Confess ledger")).toBeInTheDocument();
+  });
+
   it("hides the receipt shell from a signed-out user and shows Log in with Google", async () => {
     renderGate();
 

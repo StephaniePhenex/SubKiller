@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Skull } from "lucide-react";
 import { previewVerdict, scoreSubscription } from "@/app/(app)/review/actions";
@@ -83,6 +83,20 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
   const [errors, setErrors] = useState<{ name?: string; cost?: string }>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Client navigations keep this screen mounted while it is hidden. This
+  // generation changes when it is shown or hidden, so a submit started on a
+  // previous visit cannot leave the button disabled.
+  const shownGeneration = useRef(0);
+
+  useLayoutEffect(() => {
+    const generation = ++shownGeneration.current;
+    setSaving(false);
+    setSavedId(null);
+    setSaveError(null);
+    return () => {
+      if (shownGeneration.current === generation) shownGeneration.current += 1;
+    };
+  }, []);
 
   // The score is read-only: it is always computed by the server from the fields, never typed in.
   useEffect(() => {
@@ -127,6 +141,7 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
     }
     if (saving) return;
 
+    const generation = shownGeneration.current;
     setSaving(true);
     setSaveError(null);
 
@@ -143,19 +158,30 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
           frequency: draft.frequency,
           feeling,
         });
+        if (shownGeneration.current !== generation) return;
         id = saved.id;
         setSavedId(id);
       } catch (error) {
+        if (shownGeneration.current !== generation) return;
         setSaving(false);
-        setSaveError(
-          error instanceof NotAuthenticatedError ? error.message : "Could not file this subscription. Try again.",
-        );
+        if (error instanceof NotAuthenticatedError) {
+          setSaveError(error.message);
+        } else {
+          console.error(error);
+          const detail = error instanceof Error ? error.message : "";
+          setSaveError(
+            process.env.NODE_ENV === "development" && detail
+              ? detail
+              : "Could not file this subscription. Try again.",
+          );
+        }
         return;
       }
     }
 
     // The server scores the stored row and saves the verdict; only the row id is sent.
     const scored = await scoreSubscription(id);
+    if (shownGeneration.current !== generation) return;
     const entry = scored.ok && scored.subscription.aiScore !== null ? fromStoredSubscription(scored.subscription) : null;
     if (!entry) {
       setSaving(false);
@@ -163,6 +189,7 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
       return;
     }
 
+    setSaving(false);
     setSubscriptions((prev) => [...prev, entry]);
     router.push(ROUTES.graveyard);
   };

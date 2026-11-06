@@ -130,7 +130,7 @@ describe("TOTAL MONEY BLED baseline (SQL SUM)", () => {
     await loaded();
 
     expect(screen.getByText("TOTAL MONEY BLED: $820.00/Year")).toBeInTheDocument();
-    expect(within(totalCard()).getByText("$820.00")).toHaveClass("text-6xl");
+    expect(within(totalCard()).getByText("$820.00")).toHaveClass("text-4xl", "sm:text-6xl");
     expect(row("Monthly equivalent")).toContain("$68.33/Month");
   });
 

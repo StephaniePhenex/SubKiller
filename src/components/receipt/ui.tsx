@@ -5,7 +5,7 @@ import { INK, WHITE } from "./palette";
 
 export function Rule() {
   return (
-    <div className="my-5 overflow-hidden whitespace-nowrap select-none" aria-hidden="true">
+    <div className="my-5 max-w-full overflow-hidden whitespace-nowrap select-none" aria-hidden="true">
       {"- ".repeat(80)}
     </div>
   );
@@ -13,7 +13,7 @@ export function Rule() {
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <section className={`border-4 border-black rounded-3xl p-5 neo-shadow ${className}`} style={{ background: WHITE }}>
+    <section className={`min-w-0 max-w-full border-4 border-black rounded-3xl p-4 neo-shadow sm:p-5 ${className}`} style={{ background: WHITE }}>
       {children}
     </section>
   );

@@ -42,12 +42,12 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen w-full px-4 py-10" style={{ background: PAPER, color: INK, fontFamily: MONO }}>
+    <div className="min-h-screen w-full overflow-x-clip px-4 py-6 sm:py-10" style={{ background: PAPER, color: INK, fontFamily: MONO }}>
       <div className="max-w-xl mx-auto flex justify-end mb-4">
         <button
           type="button"
           onClick={onLogout}
-          className="neo-link flex items-center gap-2 text-sm font-bold"
+          className="neo-link inline-flex min-h-11 min-w-11 items-center justify-center gap-2 px-3 text-sm font-bold"
           style={{ cursor: "pointer" }}
           aria-label="Log out"
         >
@@ -56,18 +56,18 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
         </button>
       </div>
 
-      <div className="max-w-xl mx-auto border-4 border-black rounded-3xl p-6 neo-shadow-lg" style={{ background: WHITE }}>
+      <div className="mx-auto w-full min-w-0 max-w-xl border-4 border-black rounded-3xl p-4 neo-shadow-lg sm:p-6" style={{ background: WHITE }}>
         <header className="text-center">
-          <h1 className="text-5xl font-bold tracking-tighter">SubKiller</h1>
-          <p className="mt-1">{"The Honest Sub — a receipt you didn't ask for"}</p>
-          <p className="mt-2 text-sm">
+          <h1 className="break-words text-4xl font-bold tracking-tighter sm:text-5xl">SubKiller</h1>
+          <p className="mt-1 break-words">{"The Honest Sub — a receipt you didn't ask for"}</p>
+          <p className="mt-2 text-sm break-words">
             Txn #000{subscriptions.length} · {today}
           </p>
         </header>
 
         <Rule />
 
-        <nav className="grid grid-cols-3 gap-3 pr-2 pb-2" aria-label="Pages">
+        <nav className="grid min-w-0 grid-cols-1 gap-3 pr-2 pb-2 sm:grid-cols-3" aria-label="Pages">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return (
@@ -76,7 +76,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
                 onClick={() => router.push(href)}
                 aria-current={active ? "page" : undefined}
                 aria-label={label}
-                className="flex items-center justify-center gap-2 px-3 py-3"
+                className="flex min-h-11 w-full min-w-0 items-center justify-center gap-2 px-3 py-3 text-center"
                 style={{ background: active ? MINT : WHITE, color: INK }}
               >
                 <Icon size={18} strokeWidth={2.5} aria-hidden="true" />
@@ -88,7 +88,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
 
         <Rule />
 
-        <main className="pr-2 pb-2">{children}</main>
+        <main className="min-w-0 pr-2 pb-2">{children}</main>
 
         <Rule />
 

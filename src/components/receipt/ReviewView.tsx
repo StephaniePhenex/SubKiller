@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Skull } from "lucide-react";
 import { previewVerdict, scoreSubscription } from "@/app/(app)/review/actions";
@@ -83,18 +83,12 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
   const [errors, setErrors] = useState<{ name?: string; cost?: string }>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // Client navigations keep this screen mounted while it is hidden. This
-  // generation changes when it is shown or hidden, so a submit started on a
-  // previous visit cannot leave the button disabled.
-  const shownGeneration = useRef(0);
-
-  useLayoutEffect(() => {
-    const generation = ++shownGeneration.current;
-    setSaving(false);
-    setSavedId(null);
-    setSaveError(null);
+  // A new visit remounts this screen. Bump the generation on unmount so a submit
+  // that finishes afterwards cannot lock the new screen or navigate away.
+  const submitGeneration = useRef(0);
+  useEffect(() => {
     return () => {
-      if (shownGeneration.current === generation) shownGeneration.current += 1;
+      submitGeneration.current += 1;
     };
   }, []);
 
@@ -141,7 +135,7 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
     }
     if (saving) return;
 
-    const generation = shownGeneration.current;
+    const generation = submitGeneration.current;
     setSaving(true);
     setSaveError(null);
 
@@ -158,11 +152,11 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
           frequency: draft.frequency,
           feeling,
         });
-        if (shownGeneration.current !== generation) return;
+        if (submitGeneration.current !== generation) return;
         id = saved.id;
         setSavedId(id);
       } catch (error) {
-        if (shownGeneration.current !== generation) return;
+        if (submitGeneration.current !== generation) return;
         setSaving(false);
         if (error instanceof NotAuthenticatedError) {
           setSaveError(error.message);
@@ -181,7 +175,7 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
 
     // The server scores the stored row and saves the verdict; only the row id is sent.
     const scored = await scoreSubscription(id);
-    if (shownGeneration.current !== generation) return;
+    if (submitGeneration.current !== generation) return;
     const entry = scored.ok && scored.subscription.aiScore !== null ? fromStoredSubscription(scored.subscription) : null;
     if (!entry) {
       setSaving(false);

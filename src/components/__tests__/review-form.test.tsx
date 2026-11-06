@@ -1,13 +1,16 @@
-import { Activity, useState } from "react";
+import { useState } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/client";
+import { ReviewVisitProvider, ReviewScreen } from "@/components/receipt/ReviewScreen";
 import { SubscriptionProvider } from "@/components/receipt/SubscriptionState";
 import { ReviewView } from "@/components/receipt/ReviewView";
 
 const mockPush = jest.fn();
+const mockNavigation = { pathname: "/review" };
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
+  usePathname: () => mockNavigation.pathname,
 }));
 
 jest.mock("@/lib/supabase/client", () => ({
@@ -107,6 +110,7 @@ function setNodeEnv(value: string | undefined) {
 describe("confession review form", () => {
   beforeEach(() => {
     mockPush.mockReset();
+    mockNavigation.pathname = "/review";
     jest.mocked(createClient).mockReset();
   });
 
@@ -282,8 +286,11 @@ describe("confession review form", () => {
     }
   });
 
-  it("enables submit again when the review screen is shown after a client-side return", async () => {
-    const pending = new Promise(() => {});
+  it("enables submit again when a later visit remounts Review, and ignores the abandoned request", async () => {
+    let release: (value: unknown) => void = () => {};
+    const pending = new Promise((resolve) => {
+      release = resolve;
+    });
     const builder: Record<string, unknown> = {};
     for (const method of ["select", "insert", "update", "delete", "eq", "order", "single"]) {
       builder[method] = () => builder;
@@ -297,19 +304,32 @@ describe("confession review form", () => {
       },
     } as never);
 
+    mockNavigation.pathname = "/review";
     function Harness() {
-      const [visible, setVisible] = useState(true);
+      const [, refresh] = useState(0);
       return (
         <SubscriptionProvider>
-          <button type="button" onClick={() => setVisible(false)}>
+          <button
+            type="button"
+            onClick={() => {
+              mockNavigation.pathname = "/graveyard";
+              refresh((n) => n + 1);
+            }}
+          >
             Leave review
           </button>
-          <button type="button" onClick={() => setVisible(true)}>
+          <button
+            type="button"
+            onClick={() => {
+              mockNavigation.pathname = "/review";
+              refresh((n) => n + 1);
+            }}
+          >
             Return to review
           </button>
-          <Activity mode={visible ? "visible" : "hidden"}>
-            <ReviewView />
-          </Activity>
+          <ReviewVisitProvider>
+            <ReviewScreen />
+          </ReviewVisitProvider>
         </SubscriptionProvider>
       );
     }
@@ -328,5 +348,12 @@ describe("confession review form", () => {
 
     expect(submitButton()).toBeEnabled();
     expect(screen.getByRole("textbox", { name: "Subscription" })).toBeEnabled();
+
+    await act(async () => {
+      release({ data: savedRow, error: null });
+    });
+
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(submitButton()).toBeEnabled();
   });
 });

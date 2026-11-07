@@ -22,8 +22,8 @@ export async function createClient() {
             cookieStore.set(name, value, options);
           }
         } catch {
-          // Server Components cannot set cookies. src/proxy.ts refreshes the
-          // session and writes the new cookies onto the response.
+          // Server Components cannot set cookies. The session refresh in the
+          // auth proxy (Issue #5) writes them instead.
         }
       },
     },

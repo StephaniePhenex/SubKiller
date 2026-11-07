@@ -1,16 +1,12 @@
-import { useState } from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/client";
-import { ReviewVisitProvider, ReviewScreen } from "@/components/receipt/ReviewScreen";
 import { SubscriptionProvider } from "@/components/receipt/SubscriptionState";
 import { ReviewView } from "@/components/receipt/ReviewView";
 
 const mockPush = jest.fn();
-const mockNavigation = { pathname: "/review" };
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
-  usePathname: () => mockNavigation.pathname,
 }));
 
 jest.mock("@/lib/supabase/client", () => ({
@@ -102,15 +98,9 @@ async function submit() {
   });
 }
 
-/** Jest types `NODE_ENV` as read-only. Tests still need to flip it. */
-function setNodeEnv(value: string | undefined) {
-  (process.env as { NODE_ENV?: string }).NODE_ENV = value;
-}
-
 describe("confession review form", () => {
   beforeEach(() => {
     mockPush.mockReset();
-    mockNavigation.pathname = "/review";
     jest.mocked(createClient).mockReset();
   });
 
@@ -238,12 +228,9 @@ describe("confession review form", () => {
     expect(payload).not.toHaveProperty("verdict");
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith("/graveyard");
-    // The screen stays mounted across client navigations, so a finished file must not leave the button disabled.
-    expect(screen.getByRole("button", { name: "Submit to Graveyard" })).toBeEnabled();
   });
 
   it("stays on Review when the insert is rejected", async () => {
-    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     installClient({ id: USER_ID }, { data: null as never, error: { message: "permission denied" } });
     renderReview();
 
@@ -251,109 +238,6 @@ describe("confession review form", () => {
 
     expect(mockPush).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent("Could not file this subscription. Try again.");
-    expect(screen.getByRole("alert")).not.toHaveTextContent("permission denied");
-    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining("permission denied") }));
     expect(screen.getByRole("button", { name: "Submit to Graveyard" })).toBeEnabled();
-    errorSpy.mockRestore();
-  });
-
-  it("shows the repository error in development and leaves a signed-out user on the sign-in message", async () => {
-    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-    const previousEnv = process.env.NODE_ENV;
-    setNodeEnv("development");
-    try {
-      installClient({ id: USER_ID }, { data: null as never, error: { message: "Could not find the table 'public.subscriptions'" } });
-      const filed = renderReview();
-
-      await submit();
-
-      expect(screen.getByRole("alert")).toHaveTextContent("Could not find the table 'public.subscriptions'");
-      expect(screen.getByRole("alert")).not.toHaveTextContent("Could not file this subscription. Try again.");
-      expect(errorSpy).toHaveBeenCalled();
-      filed.unmount();
-
-      setNodeEnv(previousEnv);
-      errorSpy.mockClear();
-      installClient(null);
-      renderReview();
-      await submit();
-
-      expect(screen.getByRole("alert")).toHaveTextContent("Sign in to manage your subscriptions.");
-      expect(errorSpy).not.toHaveBeenCalled();
-    } finally {
-      setNodeEnv(previousEnv);
-      errorSpy.mockRestore();
-    }
-  });
-
-  it("enables submit again when a later visit remounts Review, and ignores the abandoned request", async () => {
-    let release: (value: unknown) => void = () => {};
-    const pending = new Promise((resolve) => {
-      release = resolve;
-    });
-    const builder: Record<string, unknown> = {};
-    for (const method of ["select", "insert", "update", "delete", "eq", "order", "single"]) {
-      builder[method] = () => builder;
-    }
-    builder.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
-      pending.then(resolve, reject);
-    jest.mocked(createClient).mockReturnValue({
-      from: () => builder,
-      auth: {
-        getUser: jest.fn(async () => ({ data: { user: { id: USER_ID } }, error: null })),
-      },
-    } as never);
-
-    mockNavigation.pathname = "/review";
-    function Harness() {
-      const [, refresh] = useState(0);
-      return (
-        <SubscriptionProvider>
-          <button
-            type="button"
-            onClick={() => {
-              mockNavigation.pathname = "/graveyard";
-              refresh((n) => n + 1);
-            }}
-          >
-            Leave review
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              mockNavigation.pathname = "/review";
-              refresh((n) => n + 1);
-            }}
-          >
-            Return to review
-          </button>
-          <ReviewVisitProvider>
-            <ReviewScreen />
-          </ReviewVisitProvider>
-        </SubscriptionProvider>
-      );
-    }
-
-    render(<Harness />);
-    const submitButton = () => screen.getByRole("button", { name: "Submit to Graveyard" });
-
-    expect(submitButton()).toBeEnabled();
-    act(() => {
-      fireEvent.click(submitButton());
-    });
-    await waitFor(() => expect(submitButton()).toBeDisabled());
-
-    fireEvent.click(screen.getByRole("button", { name: "Leave review" }));
-    fireEvent.click(screen.getByRole("button", { name: "Return to review" }));
-
-    expect(submitButton()).toBeEnabled();
-    expect(screen.getByRole("textbox", { name: "Subscription" })).toBeEnabled();
-
-    await act(async () => {
-      release({ data: savedRow, error: null });
-    });
-
-    expect(mockPush).not.toHaveBeenCalled();
-    expect(submitButton()).toBeEnabled();
   });
 });

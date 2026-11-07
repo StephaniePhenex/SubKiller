@@ -3,26 +3,11 @@ info:
   title: SubKiller API
   version: 1.0.0
   description: |
-    Public HTTP routes and the Review page server actions.
-    `GET /api/health` is a normal route. `previewVerdict` and `scoreSubscription`
-    are Next.js server actions on the Review page. The browser posts them to
-    `/review` with a Next-Action id. They are not separate public URLs, and a
-    client cannot call them as REST.
+    The Review page server actions. `previewVerdict` and `scoreSubscription`
+    are Next.js server actions. The browser posts them to `/review` with a
+    Next-Action id. They are not separate public URLs, and a client cannot
+    call them as REST.
 paths:
-  /api/health:
-    get:
-      operationId: getHealth
-      summary: Liveness check
-      description: Returns ok when the Next.js server is handling requests. It does not check Supabase.
-      responses:
-        "200":
-          description: The server is up.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Health"
-              example:
-                ok: true
   /review:
     post:
       operationId: reviewServerActions
@@ -55,14 +40,6 @@ paths:
                   - $ref: "#/components/schemas/ScoreResult"
 components:
   schemas:
-    Health:
-      type: object
-      additionalProperties: false
-      required: [ok]
-      properties:
-        ok:
-          type: boolean
-          enum: [true]
     Frequency:
       type: string
       enum: [weekly, monthly, yearly]

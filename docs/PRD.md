@@ -19,7 +19,6 @@
     * A brutalist landing page with a "Log in with Google" button.
     * Sign-in uses Supabase Auth with the Google OAuth provider. The session is a Supabase JWT.
     * The signed-in layout calls `getUser()` on the server and opens the receipt shell only when Supabase returns a user.
-    * `src/proxy.ts` runs on later requests, refreshes the Supabase session, and writes the new cookies onto the response. A Server Component cannot write those cookies itself.
 
 - **US1: Voice Input & Confession**
   * **Description:** The Confess control is a local simulated state machine. It asks for microphone permission, then moves Ready → Recording → Processing with `setTimeout`. It does not transcribe speech.

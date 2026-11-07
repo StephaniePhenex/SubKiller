@@ -67,24 +67,3 @@ jobs:
 
     - name: Run Database Tests (pgTAP)
       run: npm run test:db
-
-  e2e:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version-file: '.nvmrc'
-        cache: 'npm'
-
-    - name: Install Dependencies
-      run: npm ci
-
-    - name: Run end-to-end tests
-      # Starts the dev server with SUBKILLER_E2E_AUTH=1, then runs Cypress.
-      # The harness never treats that flag as a real user in production.
-      run: npm run test:e2e

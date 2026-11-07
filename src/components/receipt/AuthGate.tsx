@@ -36,9 +36,6 @@ export function AuthGate({
   }, [pathname, router]);
 
   useEffect(() => {
-    // The Cypress server has no Supabase project. The shell is already held open.
-    if (holdE2ESession) return;
-
     const supabase = createClient();
     const {
       data: { subscription },

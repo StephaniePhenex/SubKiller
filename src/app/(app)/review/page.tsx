@@ -1,4 +1,6 @@
-import { ReviewView, type ConfessionFields } from "@/components/receipt/ReviewView";
+import { Suspense } from "react";
+import { ReviewScreen } from "@/components/receipt/ReviewScreen";
+import type { ConfessionFields } from "@/components/receipt/ReviewView";
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -17,11 +19,23 @@ function fieldsFromSearch(params: Record<string, string | string[] | undefined>)
   return Object.keys(fields).length ? fields : undefined;
 }
 
-export default async function ReviewPage({
+async function ReviewFromSearch({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  return <ReviewView initialFields={fieldsFromSearch(params)} />;
+  return <ReviewScreen initialFields={fieldsFromSearch(params)} />;
+}
+
+export default function ReviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <ReviewFromSearch searchParams={searchParams} />
+    </Suspense>
+  );
 }

@@ -8,11 +8,12 @@ describe("SubKiller homepage", () => {
     cy.get("h1").should("have.text", "SubKiller");
   });
 
-  it("shows the total money bled summary", () => {
-    cy.contains("TOTAL MONEY BLED").should("be.visible");
-  });
-
-  it("renders the primary call to action", () => {
-    cy.contains("button", "Face the damage").should("be.visible").and("have.attr", "type", "button");
+  it("shows the Google login gate", () => {
+    cy.contains("h2", "Time to face the damage.").should("be.visible");
+    cy.contains("button", "Log in with Google")
+      .should("be.visible")
+      .and("have.attr", "type", "button")
+      .and("have.attr", "aria-label", "Log in with Google");
+    cy.contains("TOTAL MONEY BLED").should("not.exist");
   });
 });

@@ -16,7 +16,7 @@ function KillCheckbox({ id, checked, onChange, label }: { id: string; checked: b
       checked={checked}
       onChange={onChange}
       aria-label={label}
-      className="shrink-0 w-8 h-8 cursor-pointer"
+      className="h-11 w-11 shrink-0 cursor-pointer"
       style={{ accentColor: INK }}
     />
   );
@@ -41,9 +41,9 @@ function GraveCard({
         <KillCheckbox id={checkboxId} checked={sub.killed} onChange={onToggle} label={`Cancel ${sub.name}`} />
 
         <label htmlFor={checkboxId} className="flex-1 min-w-0 cursor-pointer">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span
-              className="text-lg font-bold leading-tight"
+              className="min-w-0 break-words text-lg font-bold leading-tight"
               style={{ textDecorationLine: sub.killed ? "line-through" : "none", textDecorationThickness: 3 }}
             >
               {sub.name}
@@ -118,7 +118,7 @@ export function GraveyardList({
           <Link
             href={ROUTES.confess}
             aria-label="Confess a subscription"
-            className="neo-btn inline-flex items-center gap-2 border-4 border-black rounded-full font-bold px-5 py-2"
+            className="neo-btn inline-flex min-h-11 items-center gap-2 border-4 border-black rounded-full px-5 py-2 font-bold"
             style={{ background: WHITE, color: INK }}
           >
             <Mic size={18} strokeWidth={2.75} aria-hidden="true" />

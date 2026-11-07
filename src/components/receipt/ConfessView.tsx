@@ -140,7 +140,7 @@ export function ConfessView() {
   }[micStatus];
 
   return (
-    <Card className="flex flex-col items-center text-center py-10">
+    <Card className="flex flex-col items-center text-center py-6 sm:py-10">
       <h2 className="text-3xl font-bold leading-tight mb-2">Say what you pay for.</h2>
       <p className="max-w-sm mb-10">{hint}</p>
 
@@ -173,7 +173,7 @@ export function ConfessView() {
         type="button"
         onClick={() => router.push(ROUTES.review)}
         disabled={controlsLocked}
-        className="neo-link mt-8 text-sm"
+        className="neo-link mt-8 inline-flex min-h-11 items-center justify-center px-3 text-sm"
         style={{ opacity: controlsLocked ? 0.4 : 1, cursor: controlsLocked ? "default" : "pointer" }}
         aria-label="Skip option to text"
       >

@@ -152,9 +152,9 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
           frequency: draft.frequency,
           feeling,
         });
-        if (submitGeneration.current !== generation) return;
         id = saved.id;
-        setSavedId(id);
+        // The row is stored. Record its id on this screen only while the visit is still current.
+        if (submitGeneration.current === generation) setSavedId(id);
       } catch (error) {
         if (submitGeneration.current !== generation) return;
         setSaving(false);
@@ -173,7 +173,8 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
       }
     }
 
-    // The server scores the stored row and saves the verdict; only the row id is sent.
+    // The row is already in the database. Finish scoring even if this visit ended,
+    // and skip only the UI updates for a screen that is gone.
     const scored = await scoreSubscription(id);
     if (submitGeneration.current !== generation) return;
     const entry = scored.ok && scored.subscription.aiScore !== null ? fromStoredSubscription(scored.subscription) : null;

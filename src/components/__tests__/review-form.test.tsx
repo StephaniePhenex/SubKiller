@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { scoreSubscription } from "@/app/(app)/review/actions";
 import { createClient } from "@/lib/supabase/client";
 import { ReviewVisitProvider, ReviewScreen } from "@/components/receipt/ReviewScreen";
 import { SubscriptionProvider } from "@/components/receipt/SubscriptionState";
@@ -355,5 +356,40 @@ describe("confession review form", () => {
 
     expect(mockPush).not.toHaveBeenCalled();
     expect(submitButton()).toBeEnabled();
+  });
+
+  it("scores the stored row once when Review unmounts after the insert", async () => {
+    jest.mocked(scoreSubscription).mockClear();
+    let release: (value: unknown) => void = () => {};
+    const pending = new Promise((resolve) => {
+      release = resolve;
+    });
+    const builder: Record<string, unknown> = {};
+    for (const method of ["select", "insert", "update", "delete", "eq", "order", "single"]) {
+      builder[method] = () => builder;
+    }
+    builder.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+      pending.then(resolve, reject);
+    jest.mocked(createClient).mockReturnValue({
+      from: () => builder,
+      auth: {
+        getUser: jest.fn(async () => ({ data: { user: { id: USER_ID } }, error: null })),
+      },
+    } as never);
+
+    const view = renderReview();
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Submit to Graveyard" }));
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Submit to Graveyard" })).toBeDisabled());
+
+    view.unmount();
+    await act(async () => {
+      release({ data: savedRow, error: null });
+    });
+
+    expect(scoreSubscription).toHaveBeenCalledTimes(1);
+    expect(jest.mocked(scoreSubscription).mock.calls[0]).toEqual([ROW_ID]);
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });

@@ -63,7 +63,7 @@ erDiagram
     }
     subscriptions {
         uuid id PK "not null, default gen_random_uuid()"
-        uuid user_id FK "not null, default auth.uid()"
+        uuid user_id FK "not null, default auth.uid(), references auth.users(id) on delete cascade"
         text name "not null, 1 to 100 chars"
         numeric cost "not null, numeric(10,2), above 0"
         text frequency "not null, weekly, monthly or yearly"

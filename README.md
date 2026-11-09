@@ -79,6 +79,7 @@ The dev server runs at `http://localhost:3000`. Fill `.env.local` from the table
 - [agents.md](agents.md)
 - [PRD](docs/PRD.md)
 - [OpenAPI](docs/api/openapi.yaml) documents the input and result shapes of the Review server actions `previewVerdict` and `scoreSubscription`.
+- [Architecture and database diagrams](docs/database-diagrams/diagrams.md) cover the system architecture, the `subscriptions` schema and RLS, and the `yearly_bleed()` flow (Mermaid).
 
 ## Scoring
 

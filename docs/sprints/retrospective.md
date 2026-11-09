@@ -39,16 +39,17 @@
   * **Issue 8 (Feat)**: Build the editable confession review form (5 pts / 3 hrs - Stephanie)
   * **Issue 9 (Feat)**: Render the immutable AI importance score and verdict (5 pts / 4 hrs - Ray)
   * **Issue 10 (Feat)**: Build the subscription graveyard list with sort and delete (5 pts / 4 hrs - Ray)
+  * **Note (Issues 8–10):** Issue #44 is a Sprint 2 asynchronous state fix delivered by Stephanie.
   * **Issue 11 (Feat)**: Implement the what-if savings simulator (5 pts / 3 hrs - Stephanie)
   * **Issue 12 (Feat)**: Aggregate yearly bleed with a SQL SUM and show the simulator delta (5 pts / 4 hrs - Ray)
   * **Issue 13 (Feat)**: Add the CSS-only death-certificate poster (3 pts / 3 hrs - Stephanie)
-  * **Issue 14 (Feat)**: Implement mobile responsiveness and layout adaptation for Receipt Shell (3 pts / 3 hrs - Stephanie)
-  * **Issue 15 (Docs)**: Refine and polish README for industrial-grade project presentation (2 pts / 3 hrs - Stephanie)
-  * **Issue 16 (Docs)**: Add Contribution Log and Sprint Retrospective (2 pts / 2 hrs - Stephanie)
-  * **Issue 17 (Docs)**: Add system architecture and database Mermaid diagrams (2 pts / 4 hrs - Ray)
+  * **Issue 14 (GH #16)**: Implement mobile responsiveness and layout adaptation for Receipt Shell (3 pts / 3 hrs - Stephanie)
+  * **Issue 15 (GH #17)**: Refine and polish README for industrial-grade project presentation (2 pts / 3 hrs - Stephanie)
+  * **Issue 16 (GH #42)**: Add Contribution Log and Sprint Retrospective (2 pts / 2 hrs - Stephanie)
+  * **Issue 17 (GH #43)**: Add system architecture and database Mermaid diagrams (2 pts / 4 hrs - Ray)
 * **Velocity & Metrics**:
-  * **Total Planned Story Points**: 39 pts | **Delivered**: 39 pts (100% completion)
-  * **Estimated Effort**: 34 hrs
+  * **Total Planned Story Points**: 42 pts | **Delivered**: 39 pts (100% completion)
+  * **Estimated Effort**: 36 hrs
 
 ### 2. What Went Well
 * **Client-Side Simulation & Interactive State Machines**: The What-If savings simulator and confession state machine delivered instant calculations and feedback loops without round-trip network delays, seamlessly recalculating yearly financial bleed and rendering the death-certificate poster.

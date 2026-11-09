@@ -78,7 +78,7 @@ The dev server runs at `http://localhost:3000`. Fill `.env.local` from the table
 - [DESIGN.md](DESIGN.md)
 - [agents.md](agents.md)
 - [PRD](docs/PRD.md)
-- [OpenAPI](docs/api/openapi.yaml) describes the Review server actions `previewVerdict` and `scoreSubscription`.
+- [OpenAPI](docs/api/openapi.yaml) documents the input and result shapes of the Review server actions `previewVerdict` and `scoreSubscription`.
 
 ## Scoring
 

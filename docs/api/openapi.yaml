@@ -3,41 +3,32 @@ info:
   title: SubKiller API
   version: 1.0.0
   description: |
-    The Review page server actions. `previewVerdict` and `scoreSubscription`
-    are Next.js server actions. The browser posts them to `/review` with a
-    Next-Action id. They are not separate public URLs, and a client cannot
-    call them as REST.
-paths:
-  /review:
-    post:
-      operationId: reviewServerActions
-      summary: Review server actions
-      description: |
-        Not a public REST endpoint. Next.js invokes one of two server actions
-        from the Review page. The scorer is the deterministic rules engine in
-        `src/lib/ai/provider.ts` (`mockVerdictProvider`), so a successful
-        preview has `isMock: true`.
-        `previewVerdict` scores the draft and stores nothing.
-        `scoreSubscription` reads the stored row as the signed-in user and
-        writes `ai_score` and `verdict` once through the server secret key.
-        The browser sends only the row id.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - $ref: "#/components/schemas/PreviewVerdictInput"
-                - $ref: "#/components/schemas/ScoreSubscriptionInput"
-      responses:
-        "200":
-          description: The action result, inside the Next.js server-action protocol.
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: "#/components/schemas/PreviewResult"
-                  - $ref: "#/components/schemas/ScoreResult"
+    Input and result shapes for the Review page server actions
+    `previewVerdict` and `scoreSubscription`. These are not REST endpoints.
+    Next.js posts them to `/review` through the server-action protocol, using
+    a build-specific `Next-Action` id. Anyone who has that id can reach the
+    action. Each action checks `getUser()`, and row-level security limits
+    `scoreSubscription` to the caller's own row. The scorer is the
+    deterministic rules engine in `src/lib/ai/provider.ts`
+    (`mockVerdictProvider`), so a successful preview has `isMock: true`.
+    `previewVerdict` scores the draft and stores nothing.
+    `scoreSubscription` reads the stored row as the signed-in user and writes
+    `ai_score` and `verdict` once through the server secret key.
+paths: {}
+x-server-actions:
+  previewVerdict:
+    description: Next.js server action on /review. Not a REST endpoint; called only through the server-action protocol. Requires a signed-in Supabase session.
+    argument:
+      $ref: "#/components/schemas/PreviewVerdictInput"
+    returns:
+      $ref: "#/components/schemas/PreviewResult"
+  scoreSubscription:
+    description: Next.js server action on /review. Requires a signed-in Supabase session; RLS limits it to the caller's own row.
+    argument:
+      type: string
+      format: uuid
+    returns:
+      $ref: "#/components/schemas/ScoreResult"
 components:
   schemas:
     Frequency:
@@ -64,15 +55,6 @@ components:
         feeling:
           type: string
           maxLength: 1000
-    ScoreSubscriptionInput:
-      type: object
-      additionalProperties: false
-      required: [id]
-      description: The argument to `scoreSubscription`. Next.js passes the row id as the action argument.
-      properties:
-        id:
-          type: string
-          format: uuid
     AiVerdict:
       type: object
       additionalProperties: false

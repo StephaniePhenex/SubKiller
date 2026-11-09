@@ -65,3 +65,8 @@ SubKiller is an AI-driven, Neo-Brutalist web application designed to track, eval
 - Read `docs/architecture.md` for system architecture.
 
 - Read `DESIGN.md` for our strict Neo-Brutalist UI constraints.
+
+## Team & Sprint Logs
+
+- [Sprint 1 standup, Oct 27](docs/sprints/sprint-1/standup-10-27.md)
+- [Sprint 1 standup, Oct 28](docs/sprints/sprint-1/standup-10-28.md)

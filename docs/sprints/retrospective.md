@@ -48,7 +48,7 @@
   * **Issue 16 (GH #42)**: Add Contribution Log and Sprint Retrospective (2 pts / 2 hrs - Stephanie)
   * **Issue 17 (GH #43)**: Add system architecture and database Mermaid diagrams (2 pts / 4 hrs - Ray)
 * **Velocity & Metrics**:
-  * **Total Planned Story Points**: 42 pts | **Delivered**: 39 pts (100% completion)
+  * **Total Planned Story Points**: 42 pts | **Delivered**: 42 pts (100% completion)
   * **Estimated Effort**: 36 hrs
 
 ### 2. What Went Well

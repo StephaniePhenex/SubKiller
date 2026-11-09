@@ -62,15 +62,15 @@ erDiagram
         uuid id PK
     }
     subscriptions {
-        uuid id PK
-        uuid user_id FK
-        text name
-        numeric cost
-        text frequency
-        text feeling
-        smallint ai_score "nullable 0 to 100"
-        text verdict "nullable"
-        timestamptz created_at
+        uuid id PK "not null, default gen_random_uuid()"
+        uuid user_id FK "not null, default auth.uid()"
+        text name "not null, 1 to 100 chars"
+        numeric cost "not null, numeric(10,2), above 0"
+        text frequency "not null, weekly, monthly or yearly"
+        text feeling "not null, default empty, max 1000 chars"
+        smallint ai_score "nullable, 0 to 100"
+        text verdict "nullable, max 500 chars"
+        timestamptz created_at "not null, default now()"
     }
 ```
 
@@ -82,7 +82,8 @@ The `auth_users` shape represents **Supabase-managed `auth.users`**, not a separ
 - `subscriptions.user_id`: non-null UUID, defaults to `auth.uid()`, and references `auth.users(id)`.
 - `name`: nonblank after trimming, 1–100 characters; `cost`: positive `numeric(10,2)`; `frequency`: `weekly`, `monthly`, or `yearly`; `feeling`: at most 1,000 characters.
 - `ai_score`: nullable integer 0–100; `verdict`: nullable text at most 500 characters; both must be null together or populated together.
-- Owner-based SELECT, INSERT, UPDATE and DELETE RLS policies require `auth.uid() = user_id`. Authenticated clients may insert `user_id`, `name`, `cost`, `frequency`, and `feeling`, and may update the last four; they cannot directly set `ai_score` or `verdict`.
+- RLS is enabled. Four owner policies for the `authenticated` role (`subscriptions_select_own`, `_insert_own`, `_update_own`, `_delete_own`) require `(select auth.uid()) = user_id`; `anon` has no policy.
+- Grants: `revoke all on table public.subscriptions from anon, authenticated`, then `grant select, delete` to `authenticated`, `grant insert (user_id, name, cost, frequency, feeling)`, and `grant update (name, cost, frequency, feeling)`. Signed-in clients therefore cannot set `ai_score` or `verdict`, change `user_id`, or write `id` and `created_at`.
 - A server-only admin client may write verdict columns after a prior owner check. The update matches `id`, `user_id`, and an unscored row to prevent overwriting an existing verdict.
 - `subscriptions_user_id_created_at_idx` supports per-user newest-first lists.
 
@@ -97,7 +98,7 @@ flowchart LR
     calc --> total["Numeric yearly total, or 0"]
 ```
 
-The zero-argument function returns `numeric`, runs with caller privileges, and is executable by `authenticated` but not `anon`. It does not accept a user ID supplied by the browser. This function is not a database table or relationship.
+The zero-argument function returns `numeric` and is declared `stable security invoker` with `set search_path = ''`, so it runs with the caller's privileges and RLS applies. It also filters on `s.user_id = (select auth.uid())`. `execute` is revoked from `public` and `anon` and granted to `authenticated`. It does not accept a user ID supplied by the browser. This function is not a database table or relationship.
 
 ### Verified repository sources
 

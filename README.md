@@ -64,4 +64,6 @@ SubKiller is an AI-driven, Neo-Brutalist web application designed to track, eval
 
 - Read `docs/architecture.md` for system architecture.
 
+- See [the architecture and database diagrams](docs/database%20diagrams/) for the system architecture, the `subscriptions` schema and RLS, and the `yearly_bleed()` flow (Mermaid).
+
 - Read `DESIGN.md` for our strict Neo-Brutalist UI constraints.

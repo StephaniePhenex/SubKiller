@@ -83,6 +83,14 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
   const [errors, setErrors] = useState<{ name?: string; cost?: string }>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // A new visit remounts this screen. Bump the generation on unmount so a submit
+  // that finishes afterwards cannot lock the new screen or navigate away.
+  const submitGeneration = useRef(0);
+  useEffect(() => {
+    return () => {
+      submitGeneration.current += 1;
+    };
+  }, []);
 
   // The score is read-only: it is always computed by the server from the fields, never typed in.
   useEffect(() => {
@@ -127,6 +135,7 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
     }
     if (saving) return;
 
+    const generation = submitGeneration.current;
     setSaving(true);
     setSaveError(null);
 
@@ -144,18 +153,30 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
           feeling,
         });
         id = saved.id;
-        setSavedId(id);
+        // The row is stored. Record its id on this screen only while the visit is still current.
+        if (submitGeneration.current === generation) setSavedId(id);
       } catch (error) {
+        if (submitGeneration.current !== generation) return;
         setSaving(false);
-        setSaveError(
-          error instanceof NotAuthenticatedError ? error.message : "Could not file this subscription. Try again.",
-        );
+        if (error instanceof NotAuthenticatedError) {
+          setSaveError(error.message);
+        } else {
+          console.error(error);
+          const detail = error instanceof Error ? error.message : "";
+          setSaveError(
+            process.env.NODE_ENV === "development" && detail
+              ? detail
+              : "Could not file this subscription. Try again.",
+          );
+        }
         return;
       }
     }
 
-    // The server scores the stored row and saves the verdict; only the row id is sent.
+    // The row is already in the database. Finish scoring even if this visit ended,
+    // and skip only the UI updates for a screen that is gone.
     const scored = await scoreSubscription(id);
+    if (submitGeneration.current !== generation) return;
     const entry = scored.ok && scored.subscription.aiScore !== null ? fromStoredSubscription(scored.subscription) : null;
     if (!entry) {
       setSaving(false);
@@ -163,6 +184,7 @@ export function ReviewView({ initialFields }: { initialFields?: Partial<Confessi
       return;
     }
 
+    setSaving(false);
     setSubscriptions((prev) => [...prev, entry]);
     router.push(ROUTES.graveyard);
   };

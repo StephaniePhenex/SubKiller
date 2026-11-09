@@ -11,9 +11,10 @@
   * **Issue 4 (Feat)**: Provision the Supabase project, subscriptions table, and row-level security (5 pts / 4 hrs - Ray)
   * **Issue 5 (Feat)**: Implement the neo-brutalist Google OAuth gate (3 pts / 4 hrs - Stephanie)
   * **Issue 6 (Feat)**: Port the receipt shell into the App Router without changing its layout (3 pts / 4 hrs - Stephanie)
+  * **Issue 26 (Docs)**: Update project context and PR workflow guidelines (3 pts / 2 hrs - Stephanie)
 * **Velocity & Metrics**:
-  * **Total Planned Story Points**: 19 pts | **Delivered**: 19 pts (100% completion)
-  * **Estimated Effort**: 21 hrs
+  * **Total Planned Story Points**: 22 pts | **Delivered**: 22 pts (100% completion)
+  * **Estimated Effort**: 23 hrs
 
 ### 2. What Went Well
 * **Early Adoption of Neo-Brutalist Design Tokens**: Successfully codified the visual baseline using Space Mono typography, hard drop shadows, crisp `#000000` 4px borders, and high-contrast color tokens (`#F4F4F0` paper backdrop, chartreuse, harsh red), ensuring visual consistency across all subsequent views.

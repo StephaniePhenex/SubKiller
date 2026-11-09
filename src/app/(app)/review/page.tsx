@@ -1,4 +1,5 @@
-import { ReviewView, type ConfessionFields } from "@/components/receipt/ReviewView";
+import { ReviewScreen } from "@/components/receipt/ReviewScreen";
+import type { ConfessionFields } from "@/components/receipt/ReviewView";
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -23,5 +24,5 @@ export default async function ReviewPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  return <ReviewView initialFields={fieldsFromSearch(params)} />;
+  return <ReviewScreen initialFields={fieldsFromSearch(params)} />;
 }

@@ -2,6 +2,8 @@
 
 ## Overview
 
+Note: Ray's Sprint 1 standup entries were reconstructed retrospectively from repository history.
+
 | Sprint | Date Range | Focus |
 | :--- | :--- | :--- |
 | **Sprint 1** | 10/26 – 11/01 | Project setup, scaffolds, CI/CD, database foundation (Issues #1 – #6) |
@@ -27,7 +29,7 @@
 * **Ray**
   * **Yesterday:** Completed the initial development environment setup.
   * **Today:** Installed the necessary libraries and packages and prepared to work on Issue #2 (Jest, React Testing Library, and Cypress).
-  * **Blockers:** Waiting for repository integrations and setup access.
+  * **Blockers:** Not recorded (TBD in the original notes)
 * **Stephanie**
   * **Yesterday:** Initialized GitHub Repo, Project Board, and created issues for Sprint 1.
   * **Today:** Working on Issue 1 (Next.js Scaffold).
@@ -39,7 +41,7 @@
 * **Ray**
   * **Yesterday:** Worked on Issue #2 and configured the automated testing infrastructure.
   * **Today:** Continued testing setup and started Issue #3 (GitHub Actions CI/CD, security checks, and Vercel).
-  * **Blockers:** Ensuring testing infrastructure works correctly with CI.
+  * **Blockers:** Not recorded (TBD in the original notes)
 * **Stephanie**
   * **Yesterday:** Finished Issue 1 (Next.js Scaffold) and set up the entire project skeleton and standards.
   * **Today:** Completed Issue 6. Successfully wired the Receipt Shell, Confess, Review, and Graveyard routes.
@@ -75,7 +77,7 @@
 * **Ray**
   * **Yesterday:** Completed the initial Supabase database implementation and security tests.
   * **Today:** Reviewed Sprint 1 progress and remaining integration requirements.
-  * **Blockers:** Waiting for outstanding integrations and teammate PR reviews.
+  * **Blockers:** None.
 * **Stephanie**
   * *(No update recorded)*
 
@@ -85,7 +87,7 @@
 * **Ray**
   * **Yesterday:** Reviewed Sprint 1 progress and outstanding development tasks.
   * **Today:** Coordinated next steps for Sprint 2 and reviewed upcoming feature responsibilities.
-  * **Blockers:** Pending teammate reviews and remaining integration work.
+  * **Blockers:** None.
 * **Stephanie**
   * **Yesterday:** None.
   * **Today:** Schedule a standup/scrum meeting for Project 2.
@@ -184,12 +186,12 @@
 | Sprint | Date | Ray | Stephanie |
 | :--- | :--- | :--- | :--- |
 | **Sprint 1** | 10/26 | **Y:** Project & rubric review<br>**T:** Dev tools setup<br>**B:** None | **Y:** User stories & PRD<br>**T:** Claude artifact, GitHub repo<br>**B:** None |
-| | 10/27 | **Y:** Dev environment ready<br>**T:** Setup Issue #2 (Jest/RTL/Cypress)<br>**B:** Waiting repo integrations | **Y:** GitHub repo & Sprint 1 issues<br>**T:** Issue #1 (Next.js Scaffold)<br>**B:** Waiting Issue #2 |
-| | 10/28 | **Y:** Issue #2 test infra<br>**T:** Started Issue #3 (CI/CD, Vercel)<br>**B:** CI & test infra sync | **Y:** Finished Issue #1<br>**T:** Finished Issue #6 (Routes)<br>**B:** Waiting Issue #2 |
+| | 10/27 | **Y:** Dev environment ready<br>**T:** Setup Issue #2 (Jest/RTL/Cypress)<br>**B:** Not recorded (TBD in the original notes) | **Y:** GitHub repo & Sprint 1 issues<br>**T:** Issue #1 (Next.js Scaffold)<br>**B:** Waiting Issue #2 |
+| | 10/28 | **Y:** Issue #2 test infra<br>**T:** Started Issue #3 (CI/CD, Vercel)<br>**B:** Not recorded (TBD in the original notes) | **Y:** Finished Issue #1<br>**T:** Finished Issue #6 (Routes)<br>**B:** Waiting Issue #2 |
 | | 10/29 | **Y:** Issue #3 GitHub Actions/Vercel<br>**T:** CI fixes, merge prep (#2, #3)<br>**B:** CI failures & branch sync | **Y:** Completed Issue #6<br>**T:** HW3 report polishing<br>**B:** Waiting Issue #2 |
 | | 10/30 | **Y:** CI/CD & merge fixes (#2, #3)<br>**T:** Issue #4 (Supabase RLS & DB)<br>**B:** Supabase security & PR comments | **Y:** HW3 report polishing<br>**T:** agents.md & Issue #5<br>**B:** Waiting PR reviews |
-| | 10/31 | **Y:** DB & security tests done<br>**T:** Review Sprint 1 progress<br>**B:** Pending teammate reviews | *(No update)* |
-| | 11/01 | **Y:** Sprint 1 progress review<br>**T:** Coordinate Sprint 2 scope<br>**B:** Pending teammate reviews | **Y:** None<br>**T:** Schedule Scrum meeting<br>**B:** Waiting PR reviews |
+| | 10/31 | **Y:** DB & security tests done<br>**T:** Review Sprint 1 progress<br>**B:** None. | *(No update)* |
+| | 11/01 | **Y:** Sprint 1 progress review<br>**T:** Coordinate Sprint 2 scope<br>**B:** None. | **Y:** None<br>**T:** Schedule Scrum meeting<br>**B:** Waiting PR reviews |
 | **Sprint 2** | 11/02 | **Y:** Sprint 1 wrap & planning<br>**T:** Prep for Issues #9, #10, #12<br>**B:** Review/Graveyard dependencies | **Y:** Scheduled Scrum meeting<br>**T:** Scrum meeting<br>**B:** None |
 | | 11/03 | **Y:** Sprint 2 requirements review<br>**T:** Issue #9 (AI Scoring), plan #10<br>**B:** Branch compatibility | **Y:** Scrum meeting<br>**T:** Finish Issues #7 & #8<br>**B:** Waiting code review |
 | | 11/04 | **Y:** AI scoring & auth subscriptions<br>**T:** Merged #9, #10, #12<br>**B:** Stacked PR dependencies | **Y:** Finished Issues #7 & #8<br>**T:** Work on Issues #11 & #13<br>**B:** Waiting code review |

@@ -2,7 +2,7 @@
 
 ## 1. Product Context & Positioning
 - **Product Name:** SubKiller (The Honest Sub)
-- **Core Concept:** A frictionless, AI-driven financial reality check that exposes the true cost of subscription waste. It transforms the dreaded chore of financial auditing into a highly satisfying, gamified act of reclaiming personal wealth by confronting the "Subjective Perception Gap."
+- **Core Concept:** A frictionless financial reality check that exposes the true cost of subscription waste. It transforms the dreaded chore of financial auditing into a highly satisfying, gamified act of reclaiming personal wealth by confronting the "Subjective Perception Gap." The importance score comes from a deterministic rules engine, not an external model.
 - **Target Output:** A brutal, cold financial reality check presented as a CVS receipt or a satirical "death certificate" for canceled subscriptions, ready to be screenshotted and flexed on social media.
 - **UI/UX Aesthetic:** **Rounded Neo-Brutalism / Pop-Art.** Thick black borders (`border-4`) and pill-shaped buttons (`rounded-full`).
   * **Hex codes:** Paper `#F4F4F0`, Ink `#000000`, Harsh Red `#FF0000`, Mint `#8CEDB0`, and Chartreuse `#E2FB72`.
@@ -16,21 +16,21 @@
 - **US0: Authentication (The Gatekeeper)**
   * **Description:** As a user, I need to log in securely so my financial data remains private across sessions.
   * **Acceptance Criteria:** 
-    * A brutalist landing page with a giant "Login with Google" button.
-    * Utilizes Supabase Auth with the Google OAuth provider, so each session is a Supabase JWT.
-    * The receipt shell treats a request as signed in when a `subkiller-session` cookie or an `sb-*-auth-token` cookie is present. The local cookie is the stand-in until Google OAuth is connected.
+    * A brutalist landing page with a "Log in with Google" button.
+    * Sign-in uses Supabase Auth with the Google OAuth provider. The session is a Supabase JWT.
+    * The signed-in layout calls `getUser()` on the server and opens the receipt shell only when Supabase returns a user.
 
 - **US1: Voice Input & Confession**
-  * **Description:** Log subscriptions quickly by speaking out details (name, cost, usage frequency, subjective feeling) to bypass tedious manual form entry.
+  * **Description:** The Confess control is a local simulated state machine. It asks for microphone permission, then moves Ready → Recording → Processing with `setTimeout`. It does not transcribe speech.
   * **Acceptance Criteria:**
-    * System handles microphone permissions gracefully.
-    * UI displays clear state transitions: Ready -> Recording (simulated delay) -> Processing (simulated delay).
-    * Extracted data auto-populates a brutally styled, editable frontend form for review.
+    * The mic flow requests microphone permission and stops the audio tracks when the pass ends or the page unmounts. A blocked microphone stays on Confess and offers the skip link.
+    * The status line moves Ready → Recording → Processing on simulated delays, then opens Review.
+    * No transcript is produced and no audio is stored. Review shows the editable sample confession unless the URL already carries `name`, `cost`, `frequency`, and `feeling`.
 
-- **US2: AI-Powered Importance Score (The Verdict)**
-  * **Description:** Receive an objective 0-100 score and a blunt one-sentence reality check based on cost, frequency, and sentiment.
+- **US2: Importance Score (The Verdict)**
+  * **Description:** The verdict is a deterministic rules engine in `src/lib/ai/provider.ts`, not a call to an external model. It starts at 60, subtracts up to 40 for the yearly cost, and moves the score by up to 30 for phrases in the feeling.
   * **Acceptance Criteria:**
-    * Output is strictly constrained to a JSON format containing `score` (0-100) and `verdict`.
+    * The engine returns JSON with `score` (an integer from 0 to 100) and `verdict`. `parseVerdictResponse` rejects anything else. The Review page labels the result as demo scoring.
     * Rendered as a compact, read-only Pop-Art badge aligned horizontally with the verdict text. Harsh Red (`#FF0000`) for scores under 30, Chartreuse (`#E2FB72`) for 30–69, and Mint (`#8CEDB0`) for 70 and above. **The user CANNOT edit this score; it is an immutable reality check.**
 
 - **US3: Subscription Graveyard Dashboard**
@@ -63,7 +63,7 @@
   * Prompts the user to "Screenshot to flex" (**NO external libraries like `html2canvas` allowed**).
 
 - **Data Privacy Boundary:**
-  * Voice recordings must be transcribed and immediately discarded. Audio files are NEVER saved to the database.
+  * The mic flow does not transcribe audio. Tracks are stopped and discarded. Audio files are never saved to the database.
 
 ## 4. Non-Functional Requirements & Architecture
 

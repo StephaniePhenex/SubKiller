@@ -1,12 +1,143 @@
-openapi: 3.0.0
+openapi: 3.0.3
 info:
   title: SubKiller API
   version: 1.0.0
-  description: API specifications for SubKiller's edge functions and Supabase proxies.
-paths:
-  /api/health:
-    get:
-      summary: Check API health
-      responses:
-        '200':
-          description: OK
+  description: |
+    Input and result shapes for the Review page server actions
+    `previewVerdict` and `scoreSubscription`. These are not REST endpoints.
+    Next.js posts them to `/review` through the server-action protocol, using
+    a build-specific `Next-Action` id. Anyone who has that id can reach the
+    action. Each action checks `getUser()`, and row-level security limits
+    `scoreSubscription` to the caller's own row. The scorer is the
+    deterministic rules engine in `src/lib/ai/provider.ts`
+    (`mockVerdictProvider`), so a successful preview has `isMock: true`.
+    `previewVerdict` scores the draft and stores nothing.
+    `scoreSubscription` reads the stored row as the signed-in user and writes
+    `ai_score` and `verdict` once through the server secret key.
+paths: {}
+x-server-actions:
+  previewVerdict:
+    description: Next.js server action on /review. Not a REST endpoint; called only through the server-action protocol. Requires a signed-in Supabase session.
+    argument:
+      $ref: "#/components/schemas/PreviewVerdictInput"
+    returns:
+      $ref: "#/components/schemas/PreviewResult"
+  scoreSubscription:
+    description: Next.js server action on /review. Requires a signed-in Supabase session; RLS limits it to the caller's own row.
+    argument:
+      type: string
+      format: uuid
+    returns:
+      $ref: "#/components/schemas/ScoreResult"
+components:
+  schemas:
+    Frequency:
+      type: string
+      enum: [weekly, monthly, yearly]
+    ScoreFailure:
+      type: string
+      enum: [not-authenticated, invalid-input, not-found, invalid-ai-output, failed]
+    PreviewVerdictInput:
+      type: object
+      additionalProperties: false
+      required: [name, cost, frequency, feeling]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        cost:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+        frequency:
+          $ref: "#/components/schemas/Frequency"
+        feeling:
+          type: string
+          maxLength: 1000
+    AiVerdict:
+      type: object
+      additionalProperties: false
+      required: [aiScore, verdict]
+      properties:
+        aiScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        verdict:
+          type: string
+          minLength: 1
+          maxLength: 500
+    PreviewResult:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [ok, verdict, isMock]
+          properties:
+            ok:
+              type: boolean
+              enum: [true]
+            verdict:
+              $ref: "#/components/schemas/AiVerdict"
+            isMock:
+              type: boolean
+              description: True while the deterministic rules engine is the configured provider.
+        - type: object
+          additionalProperties: false
+          required: [ok, reason]
+          properties:
+            ok:
+              type: boolean
+              enum: [false]
+            reason:
+              $ref: "#/components/schemas/ScoreFailure"
+    Subscription:
+      type: object
+      additionalProperties: false
+      required: [id, userId, name, cost, frequency, feeling, aiScore, verdict, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        cost:
+          type: number
+        frequency:
+          $ref: "#/components/schemas/Frequency"
+        feeling:
+          type: string
+        aiScore:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+        verdict:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    ScoreResult:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [ok, subscription]
+          properties:
+            ok:
+              type: boolean
+              enum: [true]
+            subscription:
+              $ref: "#/components/schemas/Subscription"
+        - type: object
+          additionalProperties: false
+          required: [ok, reason]
+          properties:
+            ok:
+              type: boolean
+              enum: [false]
+            reason:
+              $ref: "#/components/schemas/ScoreFailure"

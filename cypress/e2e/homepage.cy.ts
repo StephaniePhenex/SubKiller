@@ -1,6 +1,10 @@
 describe("SubKiller homepage", () => {
   beforeEach(() => {
     cy.setCookie("subkiller-e2e-signed-out", "1");
+    // Next's instant prerender throws this while a signed-out redirect is in flight.
+    cy.on("uncaught:exception", (err) => {
+      if (err.message.includes("cannot have a negative time stamp")) return false;
+    });
   });
 
   it("loads the signed-out login gate", () => {

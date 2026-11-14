@@ -2,6 +2,8 @@
 
 SubKiller is a Neo-Brutalist web application that tracks subscriptions and scores each one with a deterministic rules engine.
 
+**Live production app: [https://subkiller-sigma.vercel.app](https://subkiller-sigma.vercel.app)** (deployed from `main` by Vercel)
+
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![React](https://img.shields.io/badge/React-19-149ECA)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
@@ -53,7 +55,7 @@ The dev server runs at `http://localhost:3000`. Fill `.env.local` from the table
 - **Security scan:** `npm audit --audit-level=high` fails the check on any high or critical advisory. Do not run `npm audit fix --force` to clear lower findings: it can install breaking major versions (for example an old Jest).
 - **Vercel:** the project is connected through Vercel's GitHub integration.
   - Every pull request gets a Preview deployment. The Vercel bot comments the Preview URL on the PR, and the `Vercel` status links to the build.
-  - Every push to `main` (a merged PR) deploys to Production.
+  - Every push to `main` (a merged PR) deploys to Production at [https://subkiller-sigma.vercel.app](https://subkiller-sigma.vercel.app).
   - Vercel builds independently of GitHub Actions. The ruleset below is what keeps failing code out of `main`.
 - **Node.js:** CI reads `.nvmrc` (22). Vercel uses `engines.node` (`22.x`).
 - **Branch protection:** The Protect main branch ruleset requires both `build-and-test` and `db-test` status checks, plus 1 approving review. Only a repository admin can change this ruleset.
@@ -87,5 +89,6 @@ The importance score is a deterministic rules engine, not a call to an external 
 
 ## Team & Sprint Logs
 
-- [Sprint 1 standup, Oct 27](docs/sprints/sprint-1/standup-10-27.md)
-- [Sprint 1 standup, Oct 28](docs/sprints/sprint-1/standup-10-28.md)
+- [Contribution log](docs/sprints/contribution-log.md): who owned which issues in Sprint 1 and Sprint 2.
+- [Sprint 1 & Sprint 2 retrospectives](docs/sprints/retrospective.md)
+- [Scrum ceremony & daily standup log](docs/sprints/sprint_standups.md): Sprint 1 and Sprint 2 standups, with a summary table.

@@ -1,10 +1,20 @@
 openapi: 3.0.3
 info:
   title: SubKiller API
-  version: 1.0.0
+  version: 1.1.0
   description: |
-    Input and result shapes for the Review page server actions
-    `previewVerdict` and `scoreSubscription`. These are not REST endpoints.
+    SubKiller has two kinds of server interface. Only the first is REST.
+
+    **REST endpoints (`paths`).** Next.js App Router route handlers under
+    `/api`. They take ordinary HTTP GET requests and return JSON.
+    `GET /api/health` is public. `GET /api/subscriptions` needs a signed-in
+    Supabase session, sent as the Supabase auth cookie that the Google sign-in
+    flow sets. The user always comes from that session, never from a request
+    parameter, and row-level security scopes every query to that user.
+
+    **Server actions (`x-server-actions`, not REST).** Input and result shapes
+    for the Review page server actions `previewVerdict` and
+    `scoreSubscription`. These are not REST endpoints and have no path here.
     Next.js posts them to `/review` through the server-action protocol, using
     a build-specific `Next-Action` id. Anyone who has that id can reach the
     action. Each action checks `getUser()`, and row-level security limits
@@ -14,7 +24,195 @@ info:
     `previewVerdict` scores the draft and stores nothing.
     `scoreSubscription` reads the stored row as the signed-in user and writes
     `ai_score` and `verdict` once through the server secret key.
-paths: {}
+servers:
+  - url: http://localhost:3000
+    description: Local development (`npm run dev`)
+tags:
+  - name: Health
+    description: Public service and database status.
+  - name: Subscriptions
+    description: The signed-in user's subscriptions.
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      summary: Service health and database connectivity
+      description: |
+        Public; no session is needed or read. The database check calls the
+        read-only Postgres function `public.db_health()` through PostgREST as
+        the anonymous role, with a 3 second timeout. It reads no table and
+        uses no user session or secret key. `database.status` is `ok` only
+        after that round trip returned `true`.
+
+        `checks.auth` is always `not_checked`: this endpoint says nothing about
+        whether a caller is signed in or whether the Supabase Auth service is up.
+        The top-level `status` is `ok` only when the database check passed.
+
+        Failure reasons are fixed codes. Error messages, connection details,
+        and stack traces stay in the server log. Responses send
+        `Cache-Control: no-store`.
+      security: []
+      responses:
+        "200":
+          description: The service is up and the database answered the probe.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReport"
+              example:
+                status: ok
+                checks:
+                  database:
+                    status: ok
+                    latencyMs: 42
+                  auth:
+                    status: not_checked
+                checkedAt: "2026-11-14T18:00:00.000Z"
+        "503":
+          description: |
+            The database check failed. `reason` is `not_configured` (Supabase
+            settings missing on the server), `unreachable` (network error),
+            `timeout` (no answer within 3 seconds), or `query_failed`
+            (PostgREST or Postgres returned an error, or the probe did not
+            return `true`).
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReport"
+              examples:
+                unreachable:
+                  summary: Database could not be reached
+                  value:
+                    status: unavailable
+                    checks:
+                      database:
+                        status: error
+                        reason: unreachable
+                      auth:
+                        status: not_checked
+                    checkedAt: "2026-11-14T18:00:00.000Z"
+                notConfigured:
+                  summary: Supabase settings missing on the server
+                  value:
+                    status: unavailable
+                    checks:
+                      database:
+                        status: error
+                        reason: not_configured
+                      auth:
+                        status: not_checked
+                    checkedAt: "2026-11-14T18:00:00.000Z"
+  /api/subscriptions:
+    get:
+      tags: [Subscriptions]
+      operationId: listMySubscriptions
+      summary: The signed-in user's subscriptions and yearly total
+      description: |
+        Returns every subscription owned by the signed-in user, newest first,
+        mapped to camelCase, plus `summary.yearlyBleed` from the Postgres
+        function `yearly_bleed()` (weekly x 52, monthly x 12, yearly x 1,
+        rounded to cents). The session is checked with Supabase `getUser()`.
+        RLS and an explicit `user_id` filter scope every query. There is no
+        way to ask for another user's data: a `user_id` or `userId` query
+        parameter is rejected with 400. Unscored rows have `aiScore` and
+        `verdict` set to null. Responses send `Cache-Control: private, no-store`.
+      security:
+        - supabaseSession: []
+      parameters: []
+      responses:
+        "200":
+          description: The signed-in user's subscriptions. An empty list has `count` 0 and `yearlyBleed` 0.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/PrivateNoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionList"
+              examples:
+                withRows:
+                  summary: One scored and one unscored subscription
+                  value:
+                    subscriptions:
+                      - id: a0000000-0000-4000-8000-000000000001
+                        userId: 11111111-1111-4111-8111-111111111111
+                        name: Netflix
+                        cost: 15.99
+                        frequency: monthly
+                        feeling: Kind of guilty.
+                        aiScore: 20
+                        verdict: You rewatched one sitcom twice.
+                        createdAt: "2026-10-30T12:00:00+00:00"
+                      - id: a0000000-0000-4000-8000-000000000002
+                        userId: 11111111-1111-4111-8111-111111111111
+                        name: Gym
+                        cost: 10
+                        frequency: weekly
+                        feeling: ""
+                        aiScore: null
+                        verdict: null
+                        createdAt: "2026-10-29T12:00:00+00:00"
+                    summary:
+                      count: 2
+                      yearlyBleed: 711.88
+                      currency: USD
+                empty:
+                  summary: No subscriptions yet
+                  value:
+                    subscriptions: []
+                    summary:
+                      count: 0
+                      yearlyBleed: 0
+                      currency: USD
+        "400":
+          description: A `user_id` or `userId` query parameter was sent.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/PrivateNoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error:
+                  code: unsupported_parameter
+                  message: This endpoint always returns the signed-in user's subscriptions. Remove the user id parameter.
+        "401":
+          description: No valid Supabase session.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/PrivateNoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error:
+                  code: not_authenticated
+                  message: Sign in to view your subscriptions.
+        "500":
+          description: |
+            A database query failed, `yearly_bleed()` returned an invalid
+            amount, or the server is missing its Supabase settings. Details
+            stay in the server log.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/PrivateNoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                error:
+                  code: internal_error
+                  message: Could not load subscriptions.
 x-server-actions:
   previewVerdict:
     description: Next.js server action on /review. Not a REST endpoint; called only through the server-action protocol. Requires a signed-in Supabase session.
@@ -23,14 +221,129 @@ x-server-actions:
     returns:
       $ref: "#/components/schemas/PreviewResult"
   scoreSubscription:
-    description: Next.js server action on /review. Requires a signed-in Supabase session; RLS limits it to the caller's own row.
+    description: Next.js server action on /review. Not a REST endpoint; called only through the server-action protocol. Requires a signed-in Supabase session; RLS limits it to the caller's own row.
     argument:
       type: string
       format: uuid
     returns:
       $ref: "#/components/schemas/ScoreResult"
 components:
+  securitySchemes:
+    supabaseSession:
+      type: apiKey
+      in: cookie
+      name: sb-<project-ref>-auth-token
+      description: |
+        The Supabase session cookie set by the Google sign-in flow
+        (`/auth/callback`). Large sessions are split into chunked cookies
+        (`sb-<project-ref>-auth-token.0`, `.1`, ...). The server verifies it
+        with Supabase `getUser()`; the cookie name alone is not a session.
+  headers:
+    NoStore:
+      description: Health results are never cached.
+      schema:
+        type: string
+        enum: [no-store]
+    PrivateNoStore:
+      description: Per-user data; never cached by shared caches or the browser.
+      schema:
+        type: string
+        enum: [private, no-store]
   schemas:
+    HealthReport:
+      type: object
+      additionalProperties: false
+      required: [status, checks, checkedAt]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
+          description: Overall service health. `ok` only when the database check passed.
+        checks:
+          type: object
+          additionalProperties: false
+          required: [database, auth]
+          properties:
+            database:
+              $ref: "#/components/schemas/DatabaseCheck"
+            auth:
+              type: object
+              additionalProperties: false
+              required: [status]
+              description: Authentication is not part of this check.
+              properties:
+                status:
+                  type: string
+                  enum: [not_checked]
+        checkedAt:
+          type: string
+          format: date-time
+    DatabaseCheck:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [status, latencyMs]
+          properties:
+            status:
+              type: string
+              enum: [ok]
+            latencyMs:
+              type: integer
+              minimum: 0
+              description: Round-trip time of the `db_health()` call in milliseconds.
+        - type: object
+          additionalProperties: false
+          required: [status, reason]
+          properties:
+            status:
+              type: string
+              enum: [error]
+            reason:
+              type: string
+              enum: [not_configured, unreachable, timeout, query_failed]
+    SubscriptionList:
+      type: object
+      additionalProperties: false
+      required: [subscriptions, summary]
+      properties:
+        subscriptions:
+          type: array
+          description: Newest first.
+          items:
+            $ref: "#/components/schemas/Subscription"
+        summary:
+          $ref: "#/components/schemas/SubscriptionSummary"
+    SubscriptionSummary:
+      type: object
+      additionalProperties: false
+      required: [count, yearlyBleed, currency]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          description: Number of subscriptions returned.
+        yearlyBleed:
+          type: number
+          minimum: 0
+          description: "`yearly_bleed()` for the signed-in user, rounded to cents."
+        currency:
+          type: string
+          enum: [USD]
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [unsupported_parameter, not_authenticated, internal_error]
+            message:
+              type: string
     Frequency:
       type: string
       enum: [weekly, monthly, yearly]

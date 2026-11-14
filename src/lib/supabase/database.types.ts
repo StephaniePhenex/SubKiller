@@ -48,6 +48,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      db_health: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
       yearly_bleed: {
         Args: Record<PropertyKey, never>;
         Returns: number;

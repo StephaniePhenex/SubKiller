@@ -118,7 +118,7 @@ describe("test:e2e script", () => {
   it("does not use a POSIX-only inline env assignment, so it also runs on Windows", () => {
     // `VAR=1 next dev` needs a POSIX shell; npm runs scripts with cmd.exe on Windows.
     // Every inline assignment must go through cross-env.
-    const assignments = [...` ${scripts["test:e2e"]}`.matchAll(/(\S*)\s+"?([A-Z_]+=\S+)/g)];
+    const assignments = [...` ${scripts["test:e2e"]}`.matchAll(/(\S*)\s+"?([A-Z][A-Z0-9_]*=\S+)/g)];
     expect(assignments.length).toBeGreaterThan(0);
     for (const [, before, assignment] of assignments) {
       expect({ assignment, before: before.replace(/"/g, "") }).toEqual({ assignment, before: "cross-env" });

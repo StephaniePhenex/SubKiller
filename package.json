@@ -10,7 +10,7 @@
     "test": "jest --watchAll=false",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "test:e2e": "start-server-and-test \"SUBKILLER_E2E_AUTH=1 next dev\" http://localhost:3000 cypress:run",
+    "test:e2e": "start-server-and-test \"cross-env SUBKILLER_E2E_AUTH=1 next dev\" http://localhost:3000 cypress:run",
     "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p cypress",
     "test:db": "supabase test db"
   },
@@ -31,6 +31,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
     "cypress": "^16.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",

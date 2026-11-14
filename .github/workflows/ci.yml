@@ -38,11 +38,27 @@ jobs:
         npm run lint
         npx @google/design.md lint DESIGN.md
 
+    - name: Type Check
+      # Generates Next's route types, then checks the app and the Cypress project.
+      run: npm run typecheck
+
     - name: Run Unit Tests
       run: npm test
 
     - name: Build
       run: npm run build
+
+    - name: Run E2E Tests (Cypress, headless)
+      # Kept in this job so the required build-and-test check covers it.
+      # test:e2e starts `next dev` with SUBKILLER_E2E_AUTH=1 (the Cypress auth
+      # harness, which production builds ignore), waits for it to answer,
+      # runs `cypress run`, then stops the server. A failing spec fails this step.
+      # The Supabase values are local placeholders, not credentials: the specs
+      # never reach Supabase, but the browser client needs them to load.
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+      run: npm run test:e2e
 
   db-test:
     runs-on: ubuntu-latest

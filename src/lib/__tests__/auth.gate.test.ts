@@ -85,4 +85,22 @@ describe("financial page access", () => {
     expect(getUser).toHaveBeenCalledTimes(1);
     expect(user).toMatchObject({ id: USER_ID });
   });
+
+  it("returns null for the signed-out E2E cookie and the placeholder user otherwise", async () => {
+    const originalEnv = process.env;
+    process.env = { ...process.env, SUBKILLER_E2E_AUTH: "1", NODE_ENV: "test" };
+    getUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
+
+    try {
+      setCookieJar([{ name: "subkiller-e2e-signed-out", value: "1" }]);
+      await expect(getSignedInUser()).resolves.toBeNull();
+      expect(getUser).not.toHaveBeenCalled();
+
+      setCookieJar([]);
+      await expect(getSignedInUser()).resolves.toEqual({ id: "e2e-user" });
+      expect(getUser).not.toHaveBeenCalled();
+    } finally {
+      process.env = originalEnv;
+    }
+  });
 });

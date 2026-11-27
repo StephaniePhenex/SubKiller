@@ -1,0 +1,24 @@
+name: Keep Supabase Awake
+
+# The free Supabase project pauses after 7 days without API traffic.
+# GET /api/health calls public.db_health() (select true) and sends
+# Cache-Control: no-store, so this ping is a real Postgres round trip.
+# The route is public, so the job does not need repository secrets.
+# Cron runs only after this file is on the default branch (main).
+on:
+  schedule:
+    # 12:00 UTC on every 3rd calendar day: the 1st, 4th, 7th, and so on.
+    - cron: "0 12 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping-health:
+    name: Ping production database health
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: GET /api/health
+        run: curl -f -sS --max-time 30 https://subkiller-sigma.vercel.app/api/health
